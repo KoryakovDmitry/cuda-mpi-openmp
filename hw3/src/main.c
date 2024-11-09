@@ -41,5 +41,9 @@ int main() {
         diff = arr_1[i] - arr_2[i];
         printf("%.10e ", diff);
     }
+
+    free(arr_1);
+    free(arr_2);
+
     return 0;
 }
