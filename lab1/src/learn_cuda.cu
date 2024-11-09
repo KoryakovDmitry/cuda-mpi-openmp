@@ -14,8 +14,9 @@ int main() {
 
     int *dev_arr;
     cudaMalloc(&dev_arr, sizeof(int) * n);
+    cudaMemcpy(dev_arr, arr, sizeof(int) * n, cudaMemcpyHostToDevice);
 
-
+    cudaFree(dev_arr);
     free(arr);
     return 0;
 }
