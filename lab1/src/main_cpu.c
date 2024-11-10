@@ -35,15 +35,23 @@ int main() {
         scanf("%lf", &arr_2[i]);
     }
 
+
+    // set mem for first vector
+    double *arr_3 = (double *)malloc(n * sizeof(double));
+    if (arr_3 == NULL) {
+        printf("Ошибка выделения памяти для `arr_3`\n");
+        return 1;
+    }
+
     // calc diff
     for (i = 0; i < n; i++) {
-        double diff;
-        diff = arr_1[i] - arr_2[i];
-        printf("%.10e ", diff);
+        arr_3[i] = arr_1[i] - arr_2[i];
+        printf("%.10e ", arr_3[i]);
     }
 
     free(arr_1);
     free(arr_2);
+    free(arr_3);
 
     return 0;
 }
