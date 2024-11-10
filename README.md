@@ -14,6 +14,6 @@ nvcc -o cuda_exe main.cu
 
 ### Sign the src
 ```bash
-gpg --pinentry-mode loopback -u "D873F5BD" -ab main.c
-git add main.c.asc -f && git commit -m "added sign" && git push
+gpg --pinentry-mode loopback -u "D873F5BD" -ab main.cu
+git add main.cu.asc -f && git commit -m "added sign" && git push
 ```
