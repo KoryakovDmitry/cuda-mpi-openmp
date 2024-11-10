@@ -75,14 +75,14 @@ int main() {
     CSC(cudaEventDestroy(start));
     CSC(cudaEventDestroy(stop));
 
-    printf("CUDA execution time: %f ms\n", t);
+    // printf("CUDA execution time: %f ms\n", t);
 
     CSC(cudaMemcpy(host_arr_3, dev_arr_3, sizeof(double) * n, cudaMemcpyDeviceToHost));
 
     for (i = 0; i < n; i++) {
         printf("%.10e ", host_arr_3[i]);
     }
-    printf("\n");
+    // printf("\n");
 
     CSC(cudaFree(dev_arr_1));
     CSC(cudaFree(dev_arr_2));
