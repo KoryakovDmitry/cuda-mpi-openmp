@@ -68,8 +68,8 @@ int main() {
     CSC(cudaEventRecord(start));
     kernel <<< 512, 512 >>> (dev_arr_1, dev_arr_2, dev_arr_3, n);
     CSC(cudaEventRecord(stop));
-    CSC(cudaEventSynchronize());
     CSC(cudaEventSynchronize(stop));
+    CSC(cudaEventSynchronize());
     CSC(cudaGetLastError());
 
     float t;
