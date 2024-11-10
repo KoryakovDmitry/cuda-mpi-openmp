@@ -1,5 +1,11 @@
 # cuda-mpi-openmp
 
+### update
+
+```bash
+git pull
+```
+
 ### compile & run
 ```bash
 nvcc -o cuda_exe main.cu
