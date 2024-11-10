@@ -87,9 +87,9 @@ int main() {
     printf("\n");
 
 
-    CSC(cudaFree(dev_a));
-    CSC(cudaFree(dev_b));
-    CSC(cudaFree(dev_c));
+    CSC(cudaFree(dev_arr_1));
+    CSC(cudaFree(dev_arr_2));
+    CSC(cudaFree(dev_arr_3));
     free(host_arr_1);
     free(host_arr_2);
     free(host_arr_3);
