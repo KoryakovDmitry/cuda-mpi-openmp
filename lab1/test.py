@@ -17,6 +17,7 @@ double_left = -1e100
 double_right = 1e100
 atol = 1e-10
 
+
 async def get_stat_time(data_np):
     mean = np.mean(data_np)
     median = np.median(data_np)
@@ -29,6 +30,7 @@ async def get_stat_time(data_np):
     print(f"Min: {minimum} ms")
     print(f"Max: {maximum} ms")
     print(f"Standard Deviation: {std_dev} ms")
+
 
 async def run_subprocess(
     binary_path: str, n: int, first_vector: np.ndarray, second_vector: np.ndarray
@@ -47,9 +49,7 @@ async def run_subprocess(
             capture_output=True,
             check=True,
         )
-        result_vector = np.fromstring(
-            result.stdout.strip(), dtype=np.float64, sep=" "
-        )
+        result_vector = np.fromstring(result.stdout.strip(), dtype=np.float64, sep=" ")
         test_result = np.allclose(
             result_vector,
             first_vector - second_vector,
