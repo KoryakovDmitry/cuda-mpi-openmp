@@ -1,5 +1,10 @@
 # cuda-mpi-openmp
 
+### compile & run
+```bash
+nvcc -o cuda_exe main.cu
+./cuda_exe
+```
 
 ### Sign the src
 ```bash
