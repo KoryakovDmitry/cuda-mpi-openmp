@@ -154,8 +154,8 @@ async def run_binary(binary_path: str, k_times: int, max_vector_size: int):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python script.py <binary_path> <k_times>")
+    if len(sys.argv) != 4:
+        print("Usage: python script.py <binary_path> <k_times> <max_vector_size>")
         # sys.exit(1)
         binary_path = "lab1/src/a.out"
         k_times = 10
