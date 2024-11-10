@@ -15,8 +15,6 @@ np.random.seed(42)
 # double_right = 1.7976931348623157e308
 double_left = -1e100
 double_right = 1e100
-max_vector_size = 2**25
-# max_vector_size = 30
 atol = 1e-10
 
 async def get_stat_time(data_np):
@@ -63,7 +61,7 @@ async def run_subprocess(
         return False, None, None, err
 
 
-async def run_binary(binary_path: str, k_times: int):
+async def run_binary(binary_path: str, k_times: int, max_vector_size: int):
     tasks = []
     for i in range(k_times):
         n = np.random.randint(1, max_vector_size)
@@ -161,8 +159,11 @@ if __name__ == "__main__":
         # sys.exit(1)
         binary_path = "lab1/src/a.out"
         k_times = 10
+        # max_vector_size = 2**25
+        max_vector_size = 100
     else:
         binary_path = sys.argv[1]
         k_times = int(sys.argv[2])
+        max_vector_size = int(sys.argv[3])
 
-    asyncio.run(run_binary(binary_path, k_times))
+    asyncio.run(run_binary(binary_path, k_times, max_vector_size))
