@@ -15,8 +15,8 @@ np.random.seed(42)
 # double_right = 1.7976931348623157e308
 double_left = -1e100
 double_right = 1e100
-# max_vector_size = 2**25
-max_vector_size = 30
+max_vector_size = 2**25
+# max_vector_size = 30
 atol = 1e-10
 
 async def get_stat_time(data_np):
