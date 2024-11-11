@@ -273,7 +273,10 @@ class BaseTester:
     def plot_df_score(self, df_scores: pd.DataFrame, ):
         # 1. Group by 'device' and 'kernel_size', calculate median 'time_kernel_exe_ms'
         df_scores['kernel_size'] = df_scores['kernel_size'].apply(lambda x: json.dumps(x))
-        grouped = df_scores.groupby(['device', 'kernel_size'])['time_kernel_exe_ms'].median().reset_index()
+        grouped = df_scores.groupby(['device', 'kernel_size']).agg(
+            median_time=('time_kernel_exe_ms', 'median'),
+            sample_count=('time_kernel_exe_ms', 'size')
+        ).reset_index()
 
         # 2. Format the labels
         def format_label(row):
@@ -290,6 +293,11 @@ class BaseTester:
             unique_values = df_scores[col].unique()
             unique_values_str = ', '.join(map(str, unique_values))
             legend_text += f"{col}: [{unique_values_str}]\n"
+
+        # Add sample count information to the legend
+        legend_text += "\nSample Count by Group:\n"
+        for _, row in grouped.iterrows():
+            legend_text += f"{row['label']}: {row['sample_count']} samples\n"
 
         # 4. Plotting
         fig, ax = plt.subplots(figsize=(10, 6))
