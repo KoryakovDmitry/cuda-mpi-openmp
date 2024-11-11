@@ -192,7 +192,7 @@ class BaseTester:
             df_scores.to_csv(
                 os.path.join(dir2save, f"stats_{bin_name}.csv"), index=False
             )
-            print("SUCCESS!")
+            print(f"[Experiment bin_name=<{bin_name}>] SUCCESS!")
         else:
             df_failed = pd.DataFrame(
                 [
@@ -201,7 +201,7 @@ class BaseTester:
                     if not item.get("test_verification_result")
                 ]
             )
-            print(f"FAILED: len={df_failed.shape[0]}!")
+            print(f"[Experiment bin_name=<{bin_name}>] FAILED: len={df_failed.shape[0]}!")
 
             df_failed.to_csv(
                 os.path.join(dir2save, f"failed_{bin_name}.csv"), index=False
