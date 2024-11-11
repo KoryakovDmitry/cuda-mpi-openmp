@@ -22,38 +22,38 @@ class Lab1Processor(BaseLabProcessor):
         # post proc param
         self.atol = atol
 
-        self.vector_size = None
-        self.first_vector = None
-        self.second_vector = None
-
     async def pre_process(
         self,
     ):
-        self.vector_size = np.random.randint(1, self.max_vector_size)
-        self.first_vector = np.random.uniform(
-            self.double_left, self.double_right, self.vector_size
+        vector_size = np.random.randint(1, self.max_vector_size)
+        first_vector = np.random.uniform(
+            self.double_left, self.double_right, vector_size
         )
-        self.second_vector = np.random.uniform(
-            self.double_left, self.double_right, self.vector_size
+        second_vector = np.random.uniform(
+            self.double_left, self.double_right, vector_size
         )
         first_vector_str = np.array2string(
-            self.first_vector,
+            first_vector,
             separator=" ",
             max_line_width=np.inf,
             precision=self.precision_array,
         )[1:-1].strip()
         second_vector_str = np.array2string(
-            self.second_vector,
+            second_vector,
             separator=" ",
             max_line_width=np.inf,
             precision=self.precision_array,
         )[1:-1].strip()
-        return f"{self.vector_size}\n{first_vector_str}\n{second_vector_str}"
+        return f"{vector_size}\n{first_vector_str}\n{second_vector_str}", {
+            "vector_size": vector_size,
+            "first_vector": first_vector,
+            "second_vector": second_vector,
+        }
 
-    async def verify_result(self, task_result: np.ndarray) -> bool:
+    async def verify_result(self, task_result: np.ndarray, **kwargs) -> bool:
         test_verification_result = np.allclose(
             task_result,
-            self.first_vector - self.second_vector,
+            kwargs.get("first_vector") - kwargs.get("second_vector"),
             atol=self.atol,
         )
         return test_verification_result
@@ -61,9 +61,8 @@ class Lab1Processor(BaseLabProcessor):
     async def get_task_result(self, task_result_string: str) -> np.ndarray:
         return np.fromstring(task_result_string, dtype=np.float64, sep=" ")
 
-    async def get_data_state(self):
+    async def get_attr(self):
         return {
-            "vector_size": self.vector_size,
-            "first_vector": self.first_vector,
-            "second_vector": self.second_vector,
+            "max_vector_size": self.max_vector_size,
+            "atol": self.atol,
         }

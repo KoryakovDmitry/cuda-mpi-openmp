@@ -4,7 +4,7 @@ import re
 import subprocess
 import time
 from dataclasses import dataclass, asdict
-from typing import List, Optional, Any, Dict
+from typing import List, Optional, Any, Dict, Tuple
 
 import numpy as np
 import pandas as pd
@@ -47,6 +47,7 @@ class TaskResult:
 class SubProcessResult(TaskResult):
     status: bool
     err: Optional[str]
+    inter_data: Optional[Dict[str, Any]]
 
 
 class BaseLabProcessor:
@@ -54,29 +55,29 @@ class BaseLabProcessor:
         self.seed = seed
         np.random.seed(self.seed)
 
-    async def get_data_state(
+    async def get_attr(
         self,
     ) -> Dict[str, Any]:
         pass
 
-    async def pre_process(self, **kwargs) -> str:
+    async def pre_process(self, **kwargs) -> Tuple[str, Dict[str, Any]]:
         pass
 
-    async def verify_result(self, task_result: Any) -> bool:
+    async def verify_result(self, task_result: Any, **kwargs) -> bool:
         pass
 
     async def get_task_result(self, task_result_string: str) -> Any:
         pass
 
-    async def post_process(self, result_stdout: str) -> TaskResult:
+    async def post_process(self, result_stdout: str, **kwargs) -> TaskResult:
         result_stdout_split = result_stdout.split("\n")
         time_kernel_exe_ms_task = asyncio.create_task(
             get_time_kernel_exe(result_stdout_split[0])
         )
 
         task_result_string = "\n".join(result_stdout_split[1:])
-        task_result = (await self.get_task_result(task_result_string),)
-        test_verification_result = await self.verify_result(task_result)
+        task_result = await self.get_task_result(task_result_string)
+        test_verification_result = await self.verify_result(task_result, **kwargs)
         return TaskResult(
             time_kernel_exe_ms=await time_kernel_exe_ms_task,
             test_verification_result=test_verification_result,
@@ -91,7 +92,7 @@ async def run_subprocess(
     kernel_size_2: Optional[int] = None,
 ) -> SubProcessResult:
     try:
-        input_str = await lab_processor.pre_process()
+        input_str, inter_data = await lab_processor.pre_process()
         if kernel_size_1 and kernel_size_2:
             input_str = f"{kernel_size_1}\n{kernel_size_2}\n{input_str}"
 
@@ -103,13 +104,14 @@ async def run_subprocess(
             check=True,
         )
         task_result: TaskResult = await lab_processor.post_process(
-            result_stdout=result.stdout
+            result_stdout=result.stdout, **inter_data
         )
 
         return SubProcessResult(
             test_verification_result=task_result.test_verification_result,
             task_result=task_result.task_result,
             time_kernel_exe_ms=task_result.time_kernel_exe_ms,
+            inter_data=inter_data,
             status=True,
             err=None,
         )
@@ -119,6 +121,7 @@ async def run_subprocess(
             test_verification_result=None,
             task_result=None,
             time_kernel_exe_ms=None,
+            inter_data=None,
             status=False,
             err=err,
         )
@@ -152,7 +155,9 @@ class BaseTester:
 
         for i in range(self.k_times):
             for kernel_size_1, kernel_size_2 in kernel_sizes:
-                print(f"[Experiment bin_name=<{bin_name}> task={i} kernel_size=<{[kernel_size_1, kernel_size_2]}>] started")
+                print(
+                    f"[Experiment bin_name=<{bin_name}> task={i} kernel_size=<{[kernel_size_1, kernel_size_2]}>] started"
+                )
                 tasks.append(
                     {
                         "idx_run_time": i,
@@ -172,7 +177,7 @@ class BaseTester:
 
         for task_i in range(len(tasks)):
             result = await tasks[task_i]["task"]
-            tasks[task_i] = {**tasks[task_i], **asdict(result)}
+            tasks[task_i] = {**tasks[task_i], **asdict(result), **lab_processor.get_attr()}
             tasks[task_i]["time_exe_ms_from_start_run_time_bin_name"] = (
                 time.time() - tasks[task_i]["time_st"]
             ) * 1000
@@ -201,7 +206,9 @@ class BaseTester:
                     if not item.get("test_verification_result")
                 ]
             )
-            print(f"[Experiment bin_name=<{bin_name}>] FAILED: len={df_failed.shape[0]}!")
+            print(
+                f"[Experiment bin_name=<{bin_name}>] FAILED: len={df_failed.shape[0]}!"
+            )
 
             df_failed.to_csv(
                 os.path.join(dir2save, f"failed_{bin_name}.csv"), index=False
