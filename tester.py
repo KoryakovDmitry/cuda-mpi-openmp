@@ -55,7 +55,7 @@ class BaseLabProcessor:
         self.seed = seed
         np.random.seed(self.seed)
 
-    async def get_attr(
+    def get_attr(
         self,
     ) -> Dict[str, Any]:
         pass

@@ -61,7 +61,7 @@ class Lab1Processor(BaseLabProcessor):
     async def get_task_result(self, task_result_string: str) -> np.ndarray:
         return np.fromstring(task_result_string, dtype=np.float64, sep=" ")
 
-    async def get_attr(self):
+    def get_attr(self):
         return {
             "max_vector_size": self.max_vector_size,
             "atol": self.atol,
