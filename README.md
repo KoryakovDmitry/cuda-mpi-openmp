@@ -21,14 +21,10 @@ git add main.cu.asc -f && git commit -m "added sign" && git push
 
 ### Testing
 ```bash
-python test.py <binary_path> <k_times> <max_vector_size> [<kernel_sizes> ([[1, 32], [512, 512], [1024, 1024]])]
+python run_test.py --binary_path_cuda <binary_path_cuda> [--binary_path_cpu <binary_path_cpu>] [--kernel_sizes <kernel_sizes> ("[[1, 32], [512, 512], [1024, 1024]]")] **kwargs
 ```
-
 
 #### lab1
 ```bash
-python test.py ./lab1/src/cuda_exe_to_plot 3072 "[[1, 32], [512, 512], [1024, 1024]]"
-```
-```bash
-python test.py ./lab1/src/cpu_exe_to_plot 3072 
+python run_test.py --binary_path_cuda ./lab1/src/cuda_exe_to_plot --binary_path_cpu ./lab1/src/cpu_exe_to_plot "[[1, 32], [512, 512], [1024, 1024]]"
 ```

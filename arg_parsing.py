@@ -1,16 +1,4 @@
-import argparse
-
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    # Add known arguments
-    parser.add_argument("--verbose", action="store_true")
-    parser.add_argument("--config", type=str)
-    parser.add_argument("--timeout", type=int)
-
-    # Parse known and unknown args
-    args, unknown = parser.parse_known_args()
-
+def hundle_unkown(unknown):
     # Process unknown args into kwargs
     kwargs = {}
     i = 0
@@ -40,10 +28,4 @@ def parse_args():
             pass
         i += 1
 
-    return args, kwargs
-
-
-if __name__ == "__main__":
-    args, kwargs = parse_args()
-    print("Known args:", args)
-    print("Extra kwargs:", kwargs)
+    return kwargs
