@@ -308,7 +308,7 @@ class BaseTester:
         # Add median values on top of each bar with a smaller offset
         for bar, median in zip(bars, grouped['median_time']):
             yval = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width() / 2, yval + 0.005, f"{median:.5f}", ha='center', va='bottom')
+            ax.text(bar.get_x() + bar.get_width() / 2, yval + 0.00005, f"{median:.5f}", ha='center', va='bottom')
 
         # Place the legend text outside the plot area
         plt.text(1.02, 0.95, legend_text, transform=ax.transAxes, fontsize=10,
