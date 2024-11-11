@@ -24,6 +24,9 @@ if __name__ == "__main__":
         "--k_times", type=int, help="Number of times to run the kernel.", default=20
     )
     parser.add_argument(
+        "--return_inp", type=bool, help="Return input for binary.", default=False
+    )
+    parser.add_argument(
         "--kernel_sizes",
         type=str,
         default="[[512, 512]]",
@@ -39,6 +42,7 @@ if __name__ == "__main__":
     )
 
     print(f"Params:")
+    print(f"return_inp=<{args.return_inp}>")
     print(f"lab_name=<{lab_name}>")
     print(f"binary_path_cuda=<{args.binary_path_cuda}>")
     print(f"binary_path_cpu=<{args.binary_path_cpu}>")
@@ -51,6 +55,7 @@ if __name__ == "__main__":
         binary_path_cpu=args.binary_path_cpu,
         k_times=args.k_times,
         kernel_sizes=kernel_sizes,
+        return_inp=args.return_inp
     )
     lab_processor = MAP_LAB_PROCESSORS[lab_name](**kwargs)
     asyncio.run(tester.run_experiments(lab_processor=lab_processor))

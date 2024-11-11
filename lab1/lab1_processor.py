@@ -46,11 +46,16 @@ class Lab1Processor(BaseLabProcessor):
             max_line_width=np.inf,
             precision=self.precision_array,
         )[1:-1].strip()
-        return f"{vector_size}\n{first_vector_str}\n{second_vector_str}", {
-            "vector_size": vector_size,
-            "first_vector": first_vector,
-            "second_vector": second_vector,
-        }
+        return (
+            f"{vector_size}\n{first_vector_str}\n{second_vector_str}",
+            {
+                "first_vector": first_vector,
+                "second_vector": second_vector,
+            },
+            {
+                "vector_size": vector_size,
+            },
+        )
 
     async def verify_result(self, task_result: np.ndarray, **kwargs) -> bool:
         test_verification_result = np.allclose(

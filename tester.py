@@ -47,7 +47,7 @@ class TaskResult:
 class SubProcessResult(TaskResult):
     status: bool
     err: Optional[str]
-    inter_data: Optional[Dict[str, Any]]
+    debug_data: Optional[Dict[str, Any]]
 
 
 class BaseLabProcessor:
@@ -60,7 +60,7 @@ class BaseLabProcessor:
     ) -> Dict[str, Any]:
         pass
 
-    async def pre_process(self, **kwargs) -> Tuple[str, Dict[str, Any]]:
+    async def pre_process(self, **kwargs) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
         pass
 
     async def verify_result(self, task_result: Any, **kwargs) -> bool:
@@ -88,11 +88,12 @@ class BaseLabProcessor:
 async def run_subprocess(
     binary_path: str,
     lab_processor: BaseLabProcessor,
+    return_inp: bool,
     kernel_size_1: Optional[int] = None,
     kernel_size_2: Optional[int] = None,
 ) -> SubProcessResult:
     try:
-        input_str, inter_data = await lab_processor.pre_process()
+        input_str, inter_data_to_verify, debug_data = await lab_processor.pre_process()
         if kernel_size_1 and kernel_size_2:
             input_str = f"{kernel_size_1}\n{kernel_size_2}\n{input_str}"
 
@@ -104,14 +105,15 @@ async def run_subprocess(
             check=True,
         )
         task_result: TaskResult = await lab_processor.post_process(
-            result_stdout=result.stdout, **inter_data
+            result_stdout=result.stdout, **inter_data_to_verify
         )
-        inter_data["input_str"] = input_str
+        if return_inp:
+            debug_data["input_str"] = input_str
         return SubProcessResult(
             test_verification_result=task_result.test_verification_result,
             task_result=task_result.task_result,
             time_kernel_exe_ms=task_result.time_kernel_exe_ms,
-            inter_data=inter_data,
+            debug_data=debug_data,
             status=True,
             err=None,
         )
@@ -121,7 +123,7 @@ async def run_subprocess(
             test_verification_result=None,
             task_result=None,
             time_kernel_exe_ms=None,
-            inter_data=None,
+            debug_data=None,
             status=False,
             err=err,
         )
@@ -134,11 +136,13 @@ class BaseTester:
         k_times: int,
         kernel_sizes: List[List[Optional[int]]],
         binary_path_cpu: Optional[str] = None,
+        return_inp: bool = False,
     ):
         self.binary_path_cuda = binary_path_cuda
         self.binary_path_cpu = binary_path_cpu
         self.kernel_sizes = kernel_sizes
         self.k_times = k_times
+        self.return_inp = return_inp
 
     async def run_experiment(
         self,
@@ -169,6 +173,7 @@ class BaseTester:
                                 kernel_size_1=kernel_size_1,
                                 kernel_size_2=kernel_size_2,
                                 lab_processor=lab_processor,
+                                return_inp=self.return_inp,
                             )
                         ),
                         "kernel_size": [kernel_size_1, kernel_size_2],
@@ -177,7 +182,13 @@ class BaseTester:
 
         for task_i in range(len(tasks)):
             result = await tasks[task_i]["task"]
-            tasks[task_i] = {**tasks[task_i], **asdict(result), **lab_processor.get_attr()}
+            result_dict = asdict(result)
+            tasks[task_i] = {
+                **tasks[task_i],
+                **{k: v for k, v in result_dict.items() if k != "debug_data"},
+                **lab_processor.get_attr(),
+                "debug_data": result.debug_data,
+            }
             tasks[task_i]["time_exe_ms_from_start_run_time_bin_name"] = (
                 time.time() - tasks[task_i]["time_st"]
             ) * 1000
@@ -248,3 +259,6 @@ class BaseTester:
 
         print(f"[Experiments] FINISH time exe: {time.time() - st}")
         return df_scores
+
+    def plot_df_score(self, df_scores: pd.DataFrame):
+        data2plot = None
