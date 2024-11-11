@@ -137,12 +137,14 @@ class BaseTester:
         kernel_sizes: List[List[Optional[int]]],
         binary_path_cpu: Optional[str] = None,
         return_inp: bool = False,
+        return_task_res: bool = False,
     ):
         self.binary_path_cuda = binary_path_cuda
         self.binary_path_cpu = binary_path_cpu
         self.kernel_sizes = kernel_sizes
         self.k_times = k_times
         self.return_inp = return_inp
+        self.return_task_res = return_task_res
 
     async def run_experiment(
         self,
@@ -181,7 +183,7 @@ class BaseTester:
                 )
 
         for task_i in range(len(tasks)):
-            result = await tasks[task_i]["task"]
+            result: SubProcessResult = await tasks[task_i]["task"]
             result_dict = asdict(result)
             tasks[task_i] = {
                 **tasks[task_i],
@@ -201,7 +203,7 @@ class BaseTester:
             await print_stat_time([item.get("time_kernel_exe_ms") for item in tasks])
             df_scores = pd.DataFrame(
                 [
-                    {k: v for k, v in item.items() if k not in ("time_st", "task")}
+                    {k: v for k, v in item.items() if k not in ("time_st", "task", "task_result")}
                     for item in tasks
                 ]
             )
