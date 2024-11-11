@@ -3,7 +3,7 @@ import os
 import re
 import subprocess
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import List, Optional, Any, Dict
 
 import numpy as np
@@ -173,12 +173,12 @@ class BaseTester:
 
         for i in range(self.k_times):
             result = await tasks[i]["task"]
-            tasks[i] = {**tasks[i], **result}
+            tasks[i] = {**tasks[i], **asdict(result)}
             tasks[i]["time_exe_ms_from_start_run_time_bin_name"] = (
                 time.time() - tasks[i]["time_st"]
             ) * 1000
             print(
-                f'[{tasks[i]["idx_run_time"]}] finished with `time_kernel_exe_ms`: {tasks[i]["time_kernel_exe_ms"]} ms'
+                f'[Experiment bin_name=<{bin_name}> task={tasks[i]["idx_run_time"]}] finished with `time_kernel_exe_ms`: {tasks[i]["time_kernel_exe_ms"]} ms'
             )
 
         # print stats
