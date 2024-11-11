@@ -18,6 +18,11 @@ gpg --pinentry-mode loopback -u "D873F5BD" -ab main.cu
 git add main.cu.asc -f && git commit -m "added sign" && git push
 ```
 
+### fast access
+```bash
+ssh -L 5322:0.0.0.0:5322 sedan
+python3 -m http.server 5322
+```
 
 ### Testing
 ```bash

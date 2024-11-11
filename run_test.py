@@ -35,10 +35,17 @@ if __name__ == "__main__":
         default="[[512, 512]]",
         help="Optional kernel sizes in JSON format, e.g., '[[1, 32], [512, 512], [1024, 1024]]'",
     )
+    parser.add_argument(
+        "--metadata_columns2plot",
+        type=str,
+        default='["debug_data,"]',
+        help='metadata_columns2plot in JSON format, e.g., ["debug_data,"]',
+    )
 
     args, unknown = parser.parse_known_args()
     kwargs = hundle_unkown(unknown)
     kernel_sizes = json.loads(args.kernel_sizes) if args.kernel_sizes else None
+    metadata_columns2plot = json.loads(args.metadata_columns2plot) if args.metadata_columns2plot else None
 
     lab_name: str = os.path.basename(
         os.path.dirname(os.path.dirname(args.binary_path_cuda))
@@ -53,6 +60,7 @@ if __name__ == "__main__":
     print(f"k_times=<{args.k_times}>")
     print(f"kernel_sizes=<{kernel_sizes}>")
     print(f"kwargs=<{json.dumps(kwargs, indent=2)}>")
+    print(f"metadata_columns2plot=<{json.dumps(metadata_columns2plot, indent=2)}>")
 
     tester = BaseTester(
         binary_path_cuda=args.binary_path_cuda,
@@ -60,7 +68,8 @@ if __name__ == "__main__":
         k_times=args.k_times,
         kernel_sizes=kernel_sizes,
         return_inp=args.return_inp,
-        return_task_res=args.return_task_res
+        return_task_res=args.return_task_res,
+        metadata_columns2plot=metadata_columns2plot
     )
     lab_processor = MAP_LAB_PROCESSORS[lab_name](**kwargs)
     asyncio.run(tester.run_experiments(lab_processor=lab_processor))

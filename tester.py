@@ -8,6 +8,7 @@ from typing import List, Optional, Any, Dict, Tuple
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 TIME_KERNEL_EXE_PATTERN = r"execution time: <([\d.]+) ms>"
 
@@ -135,12 +136,15 @@ class BaseTester:
         binary_path_cuda: str,
         k_times: int,
         kernel_sizes: List[List[Optional[int]]],
+        metadata_columns2plot: List[str],
         binary_path_cpu: Optional[str] = None,
         return_inp: bool = False,
         return_task_res: bool = False,
     ):
         self.binary_path_cuda = binary_path_cuda
         self.binary_path_cpu = binary_path_cpu
+        self.metadata_columns2plot = metadata_columns2plot
+        self.dir2save = os.path.dirname(binary_path_cuda)
         self.kernel_sizes = kernel_sizes
         self.k_times = k_times
         self.return_inp = return_inp
@@ -153,7 +157,6 @@ class BaseTester:
         lab_processor: BaseLabProcessor,
     ) -> pd.DataFrame:
         bin_name = os.path.splitext(os.path.basename(binary_path))[0]
-        dir2save = os.path.dirname(binary_path)
 
         print(f"[Experiment bin_name=<{bin_name}>] START")
         df_scores = pd.DataFrame()
@@ -209,7 +212,7 @@ class BaseTester:
                 ]
             )
             df_scores.to_csv(
-                os.path.join(dir2save, f"stats_{bin_name}.csv"), index=False
+                os.path.join(self.dir2save, f"stats_{bin_name}.csv"), index=False
             )
             print(f"[Experiment bin_name=<{bin_name}>] SUCCESS!")
         else:
@@ -225,7 +228,7 @@ class BaseTester:
             )
 
             df_failed.to_csv(
-                os.path.join(dir2save, f"failed_{bin_name}.csv"), index=False
+                os.path.join(self.dir2save, f"failed_{bin_name}.csv"), index=False
             )
         return df_scores
 
@@ -263,5 +266,51 @@ class BaseTester:
         print(f"[Experiments] FINISH time exe: {time.time() - st}")
         return df_scores
 
-    def plot_df_score(self, df_scores: pd.DataFrame):
-        data2plot = None
+    def plot_df_score(self, df_scores: pd.DataFrame, ):
+        # 1. Group by 'device' and 'kernel_size', calculate median 'time_kernel_exe_ms'
+        grouped = df_scores.groupby(['device', 'kernel_size'])['time_kernel_exe_ms'].median().reset_index()
+
+        # 2. Format the labels
+        def format_label(row):
+            if row['device'] == 'CPU':
+                return f"{row['device']}"
+            else:
+                return f"{row['device']}_{row['kernel_size']}"
+
+        grouped['label'] = grouped.apply(format_label, axis=1)
+
+        # 3. Collect unique metadata values for the legend
+        legend_text = ""
+        for col in self.metadata_columns2plot:
+            unique_values = df_scores[col].unique()
+            unique_values_str = ', '.join(map(str, unique_values))
+            legend_text += f"{col}: [{unique_values_str}]\n"
+
+        # 4. Plotting
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Create the bar plot
+        bars = ax.bar(grouped['label'], grouped['time_kernel_exe_ms'], color='skyblue')
+
+        # Add median values on top of each bar
+        for bar, median in zip(bars, grouped['time_kernel_exe_ms']):
+            yval = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width() / 2, yval + 0.05, f"{median:.2f}", ha='center', va='bottom')
+
+        # Place the legend text outside the plot area
+        plt.text(1.02, 0.95, legend_text, transform=ax.transAxes, fontsize=10,
+                 verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
+
+        # Set labels and title
+        ax.set_xlabel('Device and Kernel Size')
+        ax.set_ylabel('Median Execution Time (ms)')
+        ax.set_title('Median Execution Time by Device and Kernel Size')
+
+        # Adjust layout to make room for the legend
+        plt.tight_layout()
+
+        # Save the plot as a PNG file
+        plt.savefig(os.path.join(self.dir2save, f'median_execution_time.png'), dpi=300, bbox_inches='tight')
+
+        # If you want to close the plot to free up memory
+        plt.close()
