@@ -239,10 +239,10 @@ async def run(
 
 if __name__ == "__main__":
     kernel_sizes = None
-    if len(sys.argv) != 4:
+    if len(sys.argv) < 4:
         print(
-            # "Usage: python script.py <binary_path> <k_times> <max_vector_size> [<kernel_size_1>] [<kernel_size_2>]"
-            "Usage: python script.py <binary_path> <k_times> <max_vector_size> [<kernel_sizes> ([[1, 32], [512, 512], [1024, 1024]])]"
+            # "Usage: python test.py <binary_path> <k_times> <max_vector_size> [<kernel_size_1>] [<kernel_size_2>]"
+            "Usage: python test.py <binary_path> <k_times> <max_vector_size> [<kernel_sizes> (\"[[1, 32], [512, 512], [1024, 1024]]\")]"
         )
         # sys.exit(1)
         binary_path = "lab1/src/a.out"
@@ -255,5 +255,11 @@ if __name__ == "__main__":
         max_vector_size = int(sys.argv[3])
         if "cuda" in os.path.basename(binary_path):
             kernel_sizes = json.loads(str(sys.argv[4]))
+
+    print(f"Params:")
+    print(f"binary_path=<{binary_path}>")
+    print(f"k_times=<{k_times}>")
+    print(f"max_vector_size=<{max_vector_size}>")
+    print(f"kernel_sizes=<{kernel_sizes}>")
 
     df_scores = asyncio.run(run(binary_path, k_times, max_vector_size, kernel_sizes))
