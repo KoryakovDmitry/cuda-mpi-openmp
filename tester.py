@@ -193,7 +193,7 @@ class BaseTester:
                 **tasks[task_i],
                 **{k: v for k, v in result_dict.items() if k != "debug_data"},
                 **lab_processor.get_attr(),
-                "debug_data": result.debug_data,
+                **result.debug_data,
             }
             tasks[task_i]["time_exe_ms_from_start_run_time_bin_name"] = (
                 time.time() - tasks[task_i]["time_st"]
