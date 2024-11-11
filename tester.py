@@ -106,7 +106,7 @@ async def run_subprocess(
         task_result: TaskResult = await lab_processor.post_process(
             result_stdout=result.stdout, **inter_data
         )
-
+        inter_data["input_str"] = input_str
         return SubProcessResult(
             test_verification_result=task_result.test_verification_result,
             task_result=task_result.task_result,
