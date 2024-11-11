@@ -303,10 +303,10 @@ class BaseTester:
         fig, ax = plt.subplots(figsize=(10, 6))
 
         # Create the bar plot
-        bars = ax.bar(grouped['label'], grouped['time_kernel_exe_ms'], color='skyblue')
+        bars = ax.bar(grouped['label'], grouped['median_time'], color='skyblue')
 
         # Add median values on top of each bar with a smaller offset
-        for bar, median in zip(bars, grouped['time_kernel_exe_ms']):
+        for bar, median in zip(bars, grouped['median_time']):
             yval = bar.get_height()
             ax.text(bar.get_x() + bar.get_width() / 2, yval + 0.01, f"{median:.5f}", ha='center', va='bottom')
 
