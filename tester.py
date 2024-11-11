@@ -142,12 +142,12 @@ class BaseTester:
         binary_path: str,
         kernel_sizes: List[List[Optional[int]]],
         lab_processor: BaseLabProcessor,
-    ) -> Optional[pd.DataFrame]:
+    ) -> pd.DataFrame:
         bin_name = os.path.splitext(os.path.basename(binary_path))[0]
         dir2save = os.path.dirname(binary_path)
 
         print(f"[Experiment bin_name=<{bin_name}>] START")
-        df_scores = None
+        df_scores = pd.DataFrame()
         tasks = []
 
         for i in range(self.k_times):
