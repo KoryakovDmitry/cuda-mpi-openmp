@@ -300,7 +300,7 @@ class BaseTester:
             legend_text += f"{row['label']}: {row['sample_count']} samples\n"
 
         # 4. Plotting
-        fig, ax = plt.subplots(figsize=(20, 6))
+        fig, ax = plt.subplots(figsize=(16, 6))
 
         # Create the bar plot
         bars = ax.bar(grouped['label'], grouped['median_time'], color='skyblue')
