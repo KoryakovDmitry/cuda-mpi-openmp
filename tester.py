@@ -180,10 +180,9 @@ class BaseTester:
                 f'[Experiment bin_name=<{bin_name}> task={tasks[task_i]["idx_run_time"]} kernel_size=<{tasks[task_i]["kernel_size"]}>] finished with `time_kernel_exe_ms`: {tasks[task_i]["time_kernel_exe_ms"]} ms'
             )
 
-        # print stats
-        await print_stat_time([item.get("time_kernel_exe_ms") for item in tasks])
-
         if all(item.get("test_verification_result") for item in tasks):
+            # print stats
+            await print_stat_time([item.get("time_kernel_exe_ms") for item in tasks])
             df_scores = pd.DataFrame(
                 [
                     {k: v for k, v in item.items() if k not in ("time_st", "task")}
