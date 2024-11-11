@@ -271,6 +271,7 @@ class BaseTester:
 
     def plot_df_score(self, df_scores: pd.DataFrame, ):
         # 1. Group by 'device' and 'kernel_size', calculate median 'time_kernel_exe_ms'
+        df_scores = df_scores['kernel_size'].astype(str)
         grouped = df_scores.groupby(['device', 'kernel_size'])['time_kernel_exe_ms'].median().reset_index()
 
         # 2. Format the labels
