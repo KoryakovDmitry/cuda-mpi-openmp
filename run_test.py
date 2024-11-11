@@ -21,7 +21,7 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument(
-        "--k_times", type=int, help="Number of times to run the kernel."
+        "--k_times", type=int, help="Number of times to run the kernel.", default=20
     )
     parser.add_argument(
         "--kernel_sizes",
