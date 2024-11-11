@@ -297,10 +297,10 @@ class BaseTester:
         # Create the bar plot
         bars = ax.bar(grouped['label'], grouped['time_kernel_exe_ms'], color='skyblue')
 
-        # Add median values on top of each bar
+        # Add median values on top of each bar with a smaller offset
         for bar, median in zip(bars, grouped['time_kernel_exe_ms']):
             yval = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width() / 2, yval + 0.05, f"{median:.2f}", ha='center', va='bottom')
+            ax.text(bar.get_x() + bar.get_width() / 2, yval + 0.01, f"{median:.5f}", ha='center', va='bottom')
 
         # Place the legend text outside the plot area
         plt.text(1.02, 0.95, legend_text, transform=ax.transAxes, fontsize=10,
