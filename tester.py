@@ -129,7 +129,7 @@ class BaseTester:
         self,
         binary_path_cuda: str,
         k_times: int,
-        kernel_sizes: Optional[List[List[int, int]]],
+        kernel_sizes: List[List[Optional[int]]],
         binary_path_cpu: Optional[str] = None,
     ):
         self.binary_path_cuda = binary_path_cuda
@@ -140,7 +140,7 @@ class BaseTester:
     async def run_experiment(
         self,
         binary_path: str,
-        kernel_sizes: Optional[List[List[Optional[int], Optional[int]]]],
+        kernel_sizes: List[List[Optional[int]]],
         lab_processor: BaseLabProcessor,
     ) -> Optional[pd.DataFrame]:
         bin_name = os.path.splitext(os.path.basename(binary_path))[0]
