@@ -263,6 +263,9 @@ class BaseTester:
             df_scores_cpu["device"] = ["CPU" for _ in range(df_scores_cpu.shape[0])]
             df_scores = pd.concat([df_scores, df_scores_cpu], ignore_index=True)
 
+        if df_scores.shape[0] > 0:
+            self.plot_df_score(df_scores=df_scores)
+
         print(f"[Experiments] FINISH time exe: {time.time() - st}")
         return df_scores
 
