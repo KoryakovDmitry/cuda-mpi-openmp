@@ -201,9 +201,10 @@ class BaseTester:
         if all(item.get("test_verification_result") for item in tasks):
             # print stats
             await print_stat_time([item.get("time_kernel_exe_ms") for item in tasks])
+            filtter = ("time_st", "task") if self.return_task_res else ("time_st", "task", "task_result")
             df_scores = pd.DataFrame(
                 [
-                    {k: v for k, v in item.items() if k not in ("time_st", "task", "task_result")}
+                    {k: v for k, v in item.items() if k not in filtter}
                     for item in tasks
                 ]
             )
