@@ -7,6 +7,7 @@ class Lab1Processor(BaseLabProcessor):
     def __init__(
         self,
         seed: int = 42,
+        min_vector_size: int = 1024,
         max_vector_size: int = 3072,
         atol: float = 1e-10,
         precision_array: int = 10,
@@ -14,6 +15,7 @@ class Lab1Processor(BaseLabProcessor):
         super().__init__(seed=seed)
         self.double_left = -1e100
         self.double_right = 1e100
+        self.min_vector_size = min_vector_size
         self.max_vector_size = max_vector_size
 
         # pre proc param
@@ -25,7 +27,7 @@ class Lab1Processor(BaseLabProcessor):
     async def pre_process(
         self,
     ):
-        vector_size = np.random.randint(1, self.max_vector_size)
+        vector_size = np.random.randint(self.min_vector_size, self.max_vector_size)
         first_vector = np.random.uniform(
             self.double_left, self.double_right, vector_size
         )
@@ -63,6 +65,7 @@ class Lab1Processor(BaseLabProcessor):
 
     def get_attr(self):
         return {
+            "min_vector_size": self.min_vector_size,
             "max_vector_size": self.max_vector_size,
             "atol": self.atol,
         }
