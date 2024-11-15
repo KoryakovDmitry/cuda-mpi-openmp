@@ -96,6 +96,7 @@ async def run_subprocess(
     kernel_size_1=None,  # int | List[int] | None
     kernel_size_2=None,  # int | List[int] | None
 ) -> SubProcessResult:
+    debug_data = None
     try:
         input_str, inter_data_to_verify, debug_data = await lab_processor.pre_process()
         if kernel_size_1 and kernel_size_2:
@@ -136,7 +137,7 @@ async def run_subprocess(
             test_verification_result=None,
             task_result=None,
             time_kernel_exe_ms=None,
-            debug_data=None,
+            debug_data=debug_data,
             status=False,
             err=err,
         )
@@ -148,7 +149,7 @@ async def run_subprocess(
             test_verification_result=None,
             task_result=None,
             time_kernel_exe_ms=None,
-            debug_data=None,
+            debug_data=debug_data,
             status=False,
             err=err,
         )
