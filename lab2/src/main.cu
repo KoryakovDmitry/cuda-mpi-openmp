@@ -21,8 +21,8 @@ __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
     for (int y = idy; y < h; y += offsety) {
         for (int x = idx; x < w; x += offsetx) {
             // Read pixel values from the texture
-            x = max(min(x, w), 1)
-            y = max(min(x, h), 1)
+            x = max(min(x, w), 1);
+            y = max(min(x, h), 1);
             uchar4 p00 = tex2D<uchar4>(tex, x, y);
             uchar4 p10 = tex2D<uchar4>(tex, x + 1, y);
             uchar4 p01 = tex2D<uchar4>(tex, x, y + 1);
