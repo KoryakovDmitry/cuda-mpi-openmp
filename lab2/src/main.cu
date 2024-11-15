@@ -19,13 +19,14 @@ __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
 	int offsety = blockDim.y * gridDim.y;
     int x, y;
     uchar4 p;
-    for(y = idy; y < h; y += offsety
+    for(y = idy; y < h; y += offsety {
 		for(x = idx; x < w; x += offsetx) {
             p = tex2D<uchar4>(tex, x / w, y / h);
             // YOUR CODE. TASK: Выделение контуров. Метод Робертса.
             // out[y * w + x] = // YOUR CODE
             out[y * w + x] = make_uchar4(255 - p.x, 255 - p.y, 255 - p.z, p.w);
-        }
+        };
+    }
 }
 
 int main() {
