@@ -19,9 +19,9 @@ class Lab2Processor(BaseLabProcessor):
         atol: float = 1e-10,
         precision_array: int = 10,
         extra_links_to_png: Optional[List[str]] = [],
-        dir_to_data: Optional[str] = "./lab2/data/",
-        dir_to_data_out: Optional[str] = "./lab2/data_out/",
-        dir_to_data_out_gt: Optional[str] = "./lab2/data_out_gt/",
+        dir_to_data: Optional[str] = "./lab2/data",
+        dir_to_data_out: Optional[str] = None,
+        dir_to_data_out_gt: Optional[str] = None,
     ):
         super().__init__(seed=seed)
         self.double_left = -1e100
@@ -36,7 +36,11 @@ class Lab2Processor(BaseLabProcessor):
         filenames = [
             "stalker2.png",
             "98.data",
+            "AoE.png",
+            "doom.png",
             "hf2.png",
+            "starcraft.png",
+            "warcraft.png",
             "test_01.txt",
             "test_02.txt",
             "lenna.png",
@@ -47,7 +51,14 @@ class Lab2Processor(BaseLabProcessor):
             "96.data",
             "97.data",
         ]
-        self.data2test_pre = [os.path.join(dir_to_data, fn_i) for fn_i in filenames]
+        self.data2test_pre = [
+            os.path.join(dir_to_data, fn_i)
+            for fn_i in filenames
+            if os.path.exists(os.path.join(dir_to_data, fn_i))
+        ]
+
+        if dir_to_data_out_gt is None:
+            dir_to_data_out_gt = os.path.join(os.path.dirname(dir_to_data), f"{os.path.basename(dir_to_data)}_out_gt")
 
         # self.data2test_pre = (
         #     glob(os.path.join(dir_to_data, "*.png"))
@@ -83,6 +94,9 @@ class Lab2Processor(BaseLabProcessor):
             if path2data_gt:
                 self.data_output_gt[ii] = ImgData(path2data=path2data_gt, idx=ii)
 
+        if dir_to_data_out is None:
+            dir_to_data_out = os.path.join(os.path.dirname(dir_to_data), f"{os.path.basename(dir_to_data)}_out")
+
         self.dir_to_data_out = dir_to_data_out
         os.makedirs(self.dir_to_data_out, exist_ok=True)
         shutil.rmtree(self.dir_to_data_out)
@@ -97,16 +111,16 @@ class Lab2Processor(BaseLabProcessor):
             self.current_index = (self.current_index + 1) % len(self.data_input)
             return item
 
-    async def pre_process(
-        self, **kwargs
-    ):
+    async def pre_process(self, **kwargs):
         device_info = kwargs.get(f"device_info")
         dir_to_data_out_with_device = os.path.join(self.dir_to_data_out, device_info)
         if not os.path.exists(dir_to_data_out_with_device):
             os.makedirs(dir_to_data_out_with_device, exist_ok=True)
 
         next_item = await self.get_next_item()
-        out_path_res = os.path.join(dir_to_data_out_with_device, f"{next_item.data_name}.data")
+        out_path_res = os.path.join(
+            dir_to_data_out_with_device, f"{next_item.data_name}.data"
+        )
         return (
             f"{next_item.c_data_bytes_path}\n{out_path_res}",
             {
