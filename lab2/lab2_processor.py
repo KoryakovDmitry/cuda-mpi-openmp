@@ -101,6 +101,10 @@ class Lab2Processor(BaseLabProcessor):
             hex_a = task_result.hex.replace("\n", "").replace(" ", "")
             hex_b = item_output_gt.hex.replace("\n", "").replace(" ", "")
             test_verification_result = bool(hex_a == hex_b)
+            if not test_verification_result:
+                print(f"[verify_result] FAILED `verify_result`!")
+                print(f"[verify_result] [task_result.hex] {hex_a}")
+                print(f"[verify_result] [output_gt.hex] {hex_b}")
 
         # TODO: Compare `item_res` and `item_output_gt` in another way
         return test_verification_result
