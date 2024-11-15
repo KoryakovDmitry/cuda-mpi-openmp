@@ -42,8 +42,8 @@ __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
             // Clamp the result to [0, 255]
             G = fminf(fmaxf(G, 0.0f), 255.0f);
 
-            // Convert to unsigned char with rounding
-            unsigned char res = static_cast<unsigned char>(G + 0.5f);
+            // Convert to unsigned char
+            unsigned char res = static_cast<unsigned char>(G);
 
             // Set the output pixel
             out[y * w + x] = make_uchar4(res, res, res, p00.w);
