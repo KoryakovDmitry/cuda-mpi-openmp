@@ -112,7 +112,7 @@ class ImgData:
 
         # Clean the hex data by removing spaces and newlines
         hex_data_cleaned = hex_data.replace("\n", "").replace(" ", "")
-        self.hex = hex_data.replace("", " ")
+        self.hex = hex_data.replace("\n", " ")
 
         # Convert the hex data to binary format
         binary_data = binascii.unhexlify(hex_data_cleaned)
