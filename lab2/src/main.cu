@@ -46,7 +46,7 @@ __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
             unsigned char res = static_cast<unsigned char>(G);
 
             // Set the output pixel
-            out[y * w + x] = make_uchar4(res, res, res, p00.w);
+            out[y * w + x] = make_uchar4(res, res, res, 0.0);
         }
     }
 }
