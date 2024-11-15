@@ -65,8 +65,8 @@ async def from_c_data_to_png(path2file: str, dir2save: Optional[str] = None) -> 
 
 if __name__ == "__main__":
     async def main():
-        path_png = "lab2/test_data/world_map.png"
-        path_data = "lab2/test_data/world_map_processed_test.data"
+        path_png = "lab2/test_data/lenna.png"
+        path_data = "lab2/test_data/lenna_out.data"
 
         saved_path_data = await from_png_to_c_data(path_png)
         print(f"saved_path_data={saved_path_data}")
