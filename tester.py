@@ -209,6 +209,12 @@ class BaseTester:
                 raise
             result_dict = asdict(result)
             print(
+                f"[DEBUG INFO] type(result)={type(result)}; result={result}"
+            )
+            print(
+                f"[DEBUG INFO] tasks[task_i]: type(tasks[task_i])={type(tasks[task_i])};"
+            )
+            print(
                 f"[DEBUG INFO] tasks[task_i]: type(tasks)={type(tasks)}; type(task_i)={type(task_i)}; task_i={task_i}"
             )
             print(
