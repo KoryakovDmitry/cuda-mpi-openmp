@@ -21,8 +21,8 @@ async def get_time_kernel_exe(
 ) -> Optional[float]:
     print(f"[DEBUG INFO] re.search(pattern, text): re.search({pattern}, {text})")
     match = re.search(pattern, text)
+    print(f"[DEBUG INFO] match.group(1): \"{match.group(1)}\"")
     if match:
-        print(f"[DEBUG INFO] match.group(1): \"{match.group(1)}\"")
         time_ms = float(match.group(1))
         return time_ms
     return None
