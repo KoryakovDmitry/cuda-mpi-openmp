@@ -33,7 +33,7 @@ __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
             float Y11 = 0.299f * p11.x + 0.587f * p11.y + 0.114f * p11.z;
 
             // Apply the Roberts operator
-            float Gx = Y00 - Y11;   // Gradient in x-direction
+            float Gx = Y11 - Y00;   // Gradient in x-direction
             float Gy = Y10 - Y01;   // Gradient in y-direction
 
             // Calculate the gradient magnitude
@@ -46,7 +46,7 @@ __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
             unsigned char res = static_cast<unsigned char>(G + 0.5f);
 
             // Set the output pixel
-            out[y * w + x] = make_uchar4(res, res, res, 255);
+            out[y * w + x] = make_uchar4(res, res, res, p00.w);
         }
     }
 }
