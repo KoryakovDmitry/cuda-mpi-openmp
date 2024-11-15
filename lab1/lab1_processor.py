@@ -66,7 +66,7 @@ class Lab1Processor(BaseLabProcessor):
         # )
         return test_verification_result
 
-    async def get_task_result(self, task_result_string: str) -> np.ndarray:
+    async def get_task_result(self, task_result_string: str, **kwargs) -> np.ndarray:
         return np.fromstring(task_result_string, dtype=np.float64, sep=" ")
 
     def get_attr(self):

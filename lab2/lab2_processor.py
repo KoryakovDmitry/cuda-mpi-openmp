@@ -85,6 +85,7 @@ class Lab2Processor(BaseLabProcessor):
             f"{next_item.c_data_bytes_path}\n{out_path_res}",
             {
                 "idx_data": next_item.idx,
+                "out_path_res": out_path_res,
             },
             {
                 "filename": f"{next_item.data_name}.{next_item.data_ext}",
@@ -104,8 +105,8 @@ class Lab2Processor(BaseLabProcessor):
         # TODO: Compare `item_res` and `item_output_gt` in another way
         return test_verification_result
 
-    async def get_task_result(self, task_result_string: str) -> ImgData:
-        return ImgData(path2data=task_result_string)
+    async def get_task_result(self, task_result_string: str, **kwargs) -> ImgData:
+        return ImgData(path2data=kwargs.get("out_path_res"))
 
     def get_attr(self):
         return {

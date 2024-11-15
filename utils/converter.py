@@ -3,7 +3,6 @@ import ctypes
 import io
 import os
 import struct
-from typing import Optional
 
 from PIL import Image
 

@@ -70,7 +70,7 @@ class BaseLabProcessor:
     async def verify_result(self, task_result: Any, **kwargs) -> bool:
         pass
 
-    async def get_task_result(self, task_result_string: str) -> Any:
+    async def get_task_result(self, task_result_string: str, **kwargs) -> Any:
         pass
 
     async def post_process(self, result_stdout: str, **kwargs) -> TaskResult:
@@ -80,7 +80,7 @@ class BaseLabProcessor:
         )
 
         task_result_string = "\n".join(result_stdout_split[1:])
-        task_result = await self.get_task_result(task_result_string)
+        task_result = await self.get_task_result(task_result_string, **kwargs)
         test_verification_result = await self.verify_result(task_result, **kwargs)
         return TaskResult(
             time_kernel_exe_ms=await time_kernel_exe_ms_task,
