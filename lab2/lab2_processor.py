@@ -67,7 +67,7 @@ class Lab2Processor(BaseLabProcessor):
 
     async def get_next_item(self):
         async with self.lock:
-            print(f"[DEBUG INFO] got index: self.data_input[{self.current_index}]. Is None: {bool(item is None)}")
+            print(f"[DEBUG INFO] got index: self.data_input[{self.current_index}]. Is self.current_index None: {bool(self.current_index is None)}")
             item = self.data_input[self.current_index]
             self.current_index = (self.current_index + 1) % len(self.data_input)
             return item
