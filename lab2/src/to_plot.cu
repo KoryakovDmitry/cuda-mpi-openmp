@@ -17,7 +17,6 @@ __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
     int idy = blockDim.y * blockIdx.y + threadIdx.y;
     int offsetx = blockDim.x * gridDim.x;
     int offsety = blockDim.y * gridDim.y;
-    int x_1, y_1;
 
     for (int y = idy; y < h; y += offsety) {
         for (int x = idx; x < w; x += offsetx) {
