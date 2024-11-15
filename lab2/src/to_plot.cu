@@ -14,16 +14,41 @@
 
 __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
-	int idy = blockDim.y * blockIdx.y + threadIdx.y;
-   	int offsetx = blockDim.x * gridDim.x;
-	int offsety = blockDim.y * gridDim.y;
-    int x, y;
-    uchar4 p;
-    for(y = idy; y < h; y += offsety)
-		for(x = idx; x < w; x += offsetx) {
-            p = tex2D< uchar4 >(tex, x * 4.0 / w, y * 3.0 / h);
-            out[y * w + x] = make_uchar4(255 - p.x, 255 - p.y, 255 - p.z, p.w);
+    int idy = blockDim.y * blockIdx.y + threadIdx.y;
+    int offsetx = blockDim.x * gridDim.x;
+    int offsety = blockDim.y * gridDim.y;
+
+    for (int y = idy; y < h; y += offsety) {
+        for (int x = idx; x < w; x += offsetx) {
+            // Read pixel values from the texture
+            uchar4 p00 = tex2D<uchar4>(tex, x, y);
+            uchar4 p10 = tex2D<uchar4>(tex, x + 1, y);
+            uchar4 p01 = tex2D<uchar4>(tex, x, y + 1);
+            uchar4 p11 = tex2D<uchar4>(tex, x + 1, y + 1);
+
+            // Convert RGB to luminance (grayscale)
+            float Y00 = 0.299f * p00.x + 0.587f * p00.y + 0.114f * p00.z;
+            float Y10 = 0.299f * p10.x + 0.587f * p10.y + 0.114f * p10.z;
+            float Y01 = 0.299f * p01.x + 0.587f * p01.y + 0.114f * p01.z;
+            float Y11 = 0.299f * p11.x + 0.587f * p11.y + 0.114f * p11.z;
+
+            // Apply the Roberts operator
+            float Gx = Y11 - Y00;   // Gradient in x-direction
+            float Gy = Y10 - Y01;   // Gradient in y-direction
+
+            // Calculate the gradient magnitude
+            float G = sqrtf(Gx * Gx + Gy * Gy);
+
+            // Clamp the result to [0, 255]
+            G = fminf(fmaxf(G, 0.0f), 255.0f);
+
+            // Convert to unsigned char
+            unsigned char res = static_cast<unsigned char>(G);
+
+            // Set the output pixel
+            out[y * w + x] = make_uchar4(res, res, res, p00.w);
         }
+    }
 }
 
 int main() {
@@ -65,8 +90,7 @@ int main() {
     texDesc.addressMode[1] = cudaAddressModeClamp;
     texDesc.filterMode = cudaFilterModePoint;
     texDesc.readMode = cudaReadModeElementType;
-    // texDesc.normalizedCoords = false;
-    texDesc.normalizedCoords = true;
+    texDesc.normalizedCoords = false;
 
     cudaTextureObject_t tex = 0;
     CSC(cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL));
