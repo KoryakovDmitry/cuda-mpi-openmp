@@ -8,6 +8,7 @@ from uuid import uuid4
 from tester import BaseLabProcessor
 from utils import download_file, ImgData
 
+NEW_LINE = '\n'
 
 class Lab2Processor(BaseLabProcessor):
     def __init__(
@@ -103,8 +104,8 @@ class Lab2Processor(BaseLabProcessor):
             test_verification_result = bool(hex_a == hex_b)
             if not test_verification_result:
                 print(f"[verify_result] FAILED `verify_result`: `{task_result.data_name}`!")
-                print(f"[verify_result] [task_result.hex] {task_result.hex.replace("\n", " ")}")
-                print(f"[verify_result] [output_gt.hex] {item_output_gt.hex.replace("\n", " ")}")
+                print(f"[verify_result] [task_result.hex] {task_result.hex.replace(NEW_LINE, " ")}")
+                print(f"[verify_result] [output_gt.hex] {item_output_gt.hex.replace(NEW_LINE, ' ')}")
 
         # TODO: Compare `item_res` and `item_output_gt` in another way
         return test_verification_result
