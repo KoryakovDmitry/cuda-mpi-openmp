@@ -141,6 +141,7 @@ async def run_subprocess(
 
     except Exception as e:
         err = traceback.format_exc()
+        traceback.print_exc()
         return SubProcessResult(
             test_verification_result=None,
             task_result=None,
