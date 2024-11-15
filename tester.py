@@ -212,12 +212,13 @@ class BaseTester:
         if all(item.get("test_verification_result") for item in tasks):
             # print stats
             await print_stat_time([item.get("time_kernel_exe_ms") for item in tasks])
-            filtter = ("time_st", "task") if self.return_task_res else ("time_st", "task", "task_result")
+            filtter = (
+                ("time_st", "task")
+                if self.return_task_res
+                else ("time_st", "task", "task_result")
+            )
             df_scores = pd.DataFrame(
-                [
-                    {k: v for k, v in item.items() if k not in filtter}
-                    for item in tasks
-                ]
+                [{k: v for k, v in item.items() if k not in filtter} for item in tasks]
             )
             df_scores.to_csv(
                 os.path.join(self.dir2save, f"stats_{bin_name}.csv"), index=False
@@ -277,28 +278,37 @@ class BaseTester:
         print(f"[Experiments] FINISH time exe: {time.time() - st}")
         return df_scores
 
-    def plot_df_score(self, df_scores: pd.DataFrame, ):
+    def plot_df_score(
+        self,
+        df_scores: pd.DataFrame,
+    ):
         # 1. Group by 'device' and 'kernel_size', calculate median 'time_kernel_exe_ms'
-        df_scores['kernel_size'] = df_scores['kernel_size'].apply(lambda x: json.dumps(x))
-        grouped = df_scores.groupby(['device', 'kernel_size']).agg(
-            median_time=('time_kernel_exe_ms', 'median'),
-            sample_count=('time_kernel_exe_ms', 'size')
-        ).reset_index()
+        df_scores["kernel_size"] = df_scores["kernel_size"].apply(
+            lambda x: json.dumps(x)
+        )
+        grouped = (
+            df_scores.groupby(["device", "kernel_size"])
+            .agg(
+                median_time=("time_kernel_exe_ms", "median"),
+                sample_count=("time_kernel_exe_ms", "size"),
+            )
+            .reset_index()
+        )
 
         # 2. Format the labels
         def format_label(row):
-            if row['device'] == 'CPU':
+            if row["device"] == "CPU":
                 return f"{row['device']}"
             else:
                 return f"{row['device']}_{row['kernel_size']}"
 
-        grouped['label'] = grouped.apply(format_label, axis=1)
+        grouped["label"] = grouped.apply(format_label, axis=1)
 
         # 3. Collect unique metadata values for the legend
         legend_text = ""
         for col in self.metadata_columns2plot:
             unique_values = df_scores[col].unique()
-            unique_values_str = ', '.join(map(str, unique_values))
+            unique_values_str = ", ".join(map(str, unique_values))
             legend_text += f"{col}: [{unique_values_str}]\n"
 
         # Add sample count information to the legend
@@ -310,27 +320,44 @@ class BaseTester:
         fig, ax = plt.subplots(figsize=(16, 6))
 
         # Create the bar plot
-        bars = ax.bar(grouped['label'], grouped['median_time'], color='skyblue')
+        bars = ax.bar(grouped["label"], grouped["median_time"], color="skyblue")
 
         # Add median values on top of each bar with a smaller offset
-        for bar, median in zip(bars, grouped['median_time']):
+        for bar, median in zip(bars, grouped["median_time"]):
             yval = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width() / 2, yval + 0.00005, f"{median:.5f}", ha='center', va='bottom')
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                yval + 0.00005,
+                f"{median:.5f}",
+                ha="center",
+                va="bottom",
+            )
 
         # Place the legend text outside the plot area
-        plt.text(1.02, 0.95, legend_text, transform=ax.transAxes, fontsize=10,
-                 verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
+        plt.text(
+            1.02,
+            0.95,
+            legend_text,
+            transform=ax.transAxes,
+            fontsize=10,
+            verticalalignment="top",
+            bbox=dict(facecolor="white", alpha=0.5),
+        )
 
         # Set labels and title
-        ax.set_xlabel('Device and Kernel Size')
-        ax.set_ylabel('Median Execution Time (ms)')
-        ax.set_title('Median Execution Time by Device and Kernel Size')
+        ax.set_xlabel("Device and Kernel Size")
+        ax.set_ylabel("Median Execution Time (ms)")
+        ax.set_title("Median Execution Time by Device and Kernel Size")
 
         # Adjust layout to make room for the legend
         plt.tight_layout()
 
         # Save the plot as a PNG file
-        plt.savefig(os.path.join(self.dir2save, f'median_execution_time.png'), dpi=300, bbox_inches='tight')
+        plt.savefig(
+            os.path.join(self.dir2save, f"median_execution_time.png"),
+            dpi=300,
+            bbox_inches="tight",
+        )
 
         # If you want to close the plot to free up memory
         plt.close()
