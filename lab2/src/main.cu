@@ -13,29 +13,39 @@
     } while (0)
 
 __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
-    int idx = blockDim.x * blockIdx.x + threadIdx.x;
-    int idy = blockDim.y * blockIdx.y + threadIdx.y;
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
     int offsetx = blockDim.x * gridDim.x;
     int offsety = blockDim.y * gridDim.y;
 
-    for (int y = idy; y < h; y += offsety) {
-        for (int x = idx; x < w; x += offsetx) {
-            uchar4 p = tex2D<uchar4>(tex, x, y);
-            uchar4 px = tex2D<uchar4>(tex, x + 1, y);
-            uchar4 py = tex2D<uchar4>(tex, x, y + 1);
-            uchar4 pxy = tex2D<uchar4>(tex, x + 1, y + 1);
+    for (int j = y; j < h - 1; j += offsety) {  // Adjusted loop bounds
+        for (int i = x; i < w - 1; i += offsetx) {
+            // Read the pixel values from the texture
+            uchar4 w11 = tex2D<uchar4>(tex, i, j);
+            uchar4 w12 = tex2D<uchar4>(tex, i + 1, j);
+            uchar4 w21 = tex2D<uchar4>(tex, i, j + 1);
+            uchar4 w22 = tex2D<uchar4>(tex, i + 1, j + 1);
 
-            int gx_r = abs(p.x - pxy.x) + abs(px.x - py.x);
-            int gx_g = abs(p.y - pxy.y) + abs(px.y - py.y);
-            int gx_b = abs(p.z - pxy.z) + abs(px.z - py.z);
+            // Compute Gx and Gy for each color channel
+            int Gx_r = (int)w22.x - (int)w11.x;
+            int Gy_r = (int)w21.x - (int)w12.x;
+            int Gx_g = (int)w22.y - (int)w11.y;
+            int Gy_g = (int)w21.y - (int)w12.y;
+            int Gx_b = (int)w22.z - (int)w11.z;
+            int Gy_b = (int)w21.z - (int)w12.z;
 
-            uchar4 result;
-            result.x = min(gx_r, 255);  // Clamp the result to 255
-            result.y = min(gx_g, 255);
-            result.z = min(gx_b, 255);
-            result.w = 255;  // Alpha channel remains fully opaque
+            // Compute the gradient magnitude for each channel
+            int G_r = (int)sqrtf(Gx_r * Gx_r + Gy_r * Gy_r);
+            int G_g = (int)sqrtf(Gx_g * Gx_g + Gy_g * Gy_g);
+            int G_b = (int)sqrtf(Gx_b * Gx_b + Gy_b * Gy_b);
 
-            out[y * w + x] = result;
+            // Clamp the values to [0, 255]
+            G_r = min(max(G_r, 0), 255);
+            G_g = min(max(G_g, 0), 255);
+            G_b = min(max(G_b, 0), 255);
+
+            // Set the output pixel value
+            out[j * w + i] = make_uchar4(G_r, G_g, G_b, w11.w);
         }
     }
 }
