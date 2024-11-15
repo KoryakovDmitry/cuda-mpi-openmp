@@ -13,39 +13,43 @@
     } while (0)
 
 __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
-    int x = blockDim.x * blockIdx.x + threadIdx.x;
-    int y = blockDim.y * blockIdx.y + threadIdx.y;
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int idy = blockDim.y * blockIdx.y + threadIdx.y;
     int offsetx = blockDim.x * gridDim.x;
     int offsety = blockDim.y * gridDim.y;
 
-    for (int j = y; j < h - 1; j += offsety) {  // Adjusted loop bounds
-        for (int i = x; i < w - 1; i += offsetx) {
+    for (int y = idy; y < h; y += offsety) {
+        for (int x = idx; x < w; x += offsetx) {
+            // Handle boundary conditions by clamping coordinates
+            int x1 = min(x + 1, w - 1);
+            int y1 = min(y + 1, h - 1);
+
             // Read the pixel values from the texture
-            uchar4 w11 = tex2D<uchar4>(tex, i, j);
-            uchar4 w12 = tex2D<uchar4>(tex, i + 1, j);
-            uchar4 w21 = tex2D<uchar4>(tex, i, j + 1);
-            uchar4 w22 = tex2D<uchar4>(tex, i + 1, j + 1);
+            uchar4 w11 = tex2D<uchar4>(tex, x, y);
+            uchar4 w12 = tex2D<uchar4>(tex, x1, y);
+            uchar4 w21 = tex2D<uchar4>(tex, x, y1);
+            uchar4 w22 = tex2D<uchar4>(tex, x1, y1);
 
-            // Compute Gx and Gy for each color channel
-            int Gx_r = (int)w22.x - (int)w11.x;
-            int Gy_r = (int)w21.x - (int)w12.x;
-            int Gx_g = (int)w22.y - (int)w11.y;
-            int Gy_g = (int)w21.y - (int)w12.y;
-            int Gx_b = (int)w22.z - (int)w11.z;
-            int Gy_b = (int)w21.z - (int)w12.z;
+            // Compute Gx and Gy for each color channel using the Roberts operator
+            int Gx_r = (int)w11.x - (int)w22.x;
+            int Gy_r = (int)w12.x - (int)w21.x;
+            int Gx_g = (int)w11.y - (int)w22.y;
+            int Gy_g = (int)w12.y - (int)w21.y;
+            int Gx_b = (int)w11.z - (int)w22.z;
+            int Gy_b = (int)w12.z - (int)w21.z;
 
-            // Compute the gradient magnitude for each channel
-            int G_r = (int)sqrtf(Gx_r * Gx_r + Gy_r * Gy_r);
-            int G_g = (int)sqrtf(Gx_g * Gx_g + Gy_g * Gy_g);
-            int G_b = (int)sqrtf(Gx_b * Gx_b + Gy_b * Gy_b);
+            // Compute the gradient magnitude using the sum of absolute values
+            int G_r = abs(Gx_r) + abs(Gy_r);
+            int G_g = abs(Gx_g) + abs(Gy_g);
+            int G_b = abs(Gx_b) + abs(Gy_b);
 
             // Clamp the values to [0, 255]
             G_r = min(max(G_r, 0), 255);
             G_g = min(max(G_g, 0), 255);
             G_b = min(max(G_b, 0), 255);
 
-            // Set the output pixel value
-            out[j * w + i] = make_uchar4(G_r, G_g, G_b, w11.w);
+            // Set the output pixel value with alpha channel set to zero
+            out[y * w + x] = make_uchar4(G_r, G_g, G_b, 0);
         }
     }
 }
