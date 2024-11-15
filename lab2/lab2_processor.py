@@ -34,6 +34,7 @@ class Lab2Processor(BaseLabProcessor):
         self.atol = atol
 
         filenames = [
+            "stalker2.png",
             "98.data",
             "hf2.png",
             "test_01.txt",
