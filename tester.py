@@ -204,7 +204,7 @@ class BaseTester:
             if isinstance(result, str):
                 print(result)
                 raise
-            if isinstance(result, None):
+            if isinstance(result, type(None)):
                 print(f"result is None")
                 raise
             result_dict = asdict(result)
