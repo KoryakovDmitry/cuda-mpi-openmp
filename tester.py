@@ -105,7 +105,7 @@ async def run_subprocess(
             device_info.replace(", ", "_")
             .replace(" ", "_")
             .replace("[", "_")
-            .replace("[", "_")
+            .replace("]", "_")
         )
         input_str, inter_data_to_verify, debug_data = await lab_processor.pre_process(
             device_info=device_info
