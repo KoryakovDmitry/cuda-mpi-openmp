@@ -196,6 +196,7 @@ class BaseTester:
         for task_i in range(len(tasks)):
             result: SubProcessResult = await tasks[task_i]["task"]
             result_dict = asdict(result)
+            print(f"[DEBUG INFO] tasks[task_i]: type(tasks)={type(tasks)}; type(task_i)={type(task_i)}; task_i={task_i}")
             tasks[task_i] = {
                 **tasks[task_i],
                 **{k: v for k, v in result_dict.items() if k != "debug_data"},
