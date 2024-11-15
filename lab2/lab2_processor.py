@@ -1,5 +1,6 @@
 import asyncio
 import os
+import shutil
 from glob import glob
 from typing import Optional, List
 from uuid import uuid4
@@ -62,6 +63,9 @@ class Lab2Processor(BaseLabProcessor):
                 self.data_output_gt[ii] = ImgData(path2data=path2data_gt, idx=ii)
 
         self.dir_to_data_out = dir_to_data_out
+        os.makedirs(self.dir_to_data_out, exist_ok=True)
+        shutil.rmtree(self.dir_to_data_out)
+        os.makedirs(self.dir_to_data_out, exist_ok=True)
         self.current_index = 0
         self.lock = asyncio.Lock()
 
