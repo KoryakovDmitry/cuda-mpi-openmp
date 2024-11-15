@@ -8,6 +8,8 @@ git pull
 
 ### compile & run
 ```bash
+gcc -o cpu_exe -lm main.c
+
 nvcc -o cuda_exe --std=c++11 -Werror cross-execution-space-call -lm main.cu
 ./cuda_exe
 ```
