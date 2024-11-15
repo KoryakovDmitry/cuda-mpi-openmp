@@ -5,9 +5,10 @@ import os.path
 
 from arg_parsing import hundle_unkown
 from lab1.lab1_processor import Lab1Processor
+from lab2.lab2_processor import Lab2Processor
 from tester import BaseTester
 
-MAP_LAB_PROCESSORS = {"lab1": Lab1Processor}
+MAP_LAB_PROCESSORS = {"lab1": Lab1Processor, "lab2": Lab2Processor, }
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run kernel testing with subprocess.")
