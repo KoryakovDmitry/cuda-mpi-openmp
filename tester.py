@@ -108,6 +108,9 @@ async def run_subprocess(
 
             input_str = f"{kernel_size_1}\n{kernel_size_2}\n{input_str}"
 
+        if return_inp:
+            debug_data["input_str"] = input_str
+
         result = subprocess.run(
             [binary_path],
             input=input_str,
@@ -118,8 +121,6 @@ async def run_subprocess(
         task_result: TaskResult = await lab_processor.post_process(
             result_stdout=result.stdout, **inter_data_to_verify
         )
-        if return_inp:
-            debug_data["input_str"] = input_str
         return SubProcessResult(
             test_verification_result=task_result.test_verification_result,
             task_result=task_result.task_result,
