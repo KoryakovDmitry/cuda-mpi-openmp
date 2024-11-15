@@ -91,12 +91,19 @@ async def run_subprocess(
     binary_path: str,
     lab_processor: BaseLabProcessor,
     return_inp: bool,
-    kernel_size_1: Optional[int] = None,
-    kernel_size_2: Optional[int] = None,
+    kernel_size_1: Optional[int, List[int]] = None,
+    kernel_size_2: Optional[int, List[int]] = None,
 ) -> SubProcessResult:
     try:
         input_str, inter_data_to_verify, debug_data = await lab_processor.pre_process()
         if kernel_size_1 and kernel_size_2:
+
+            if isinstance(kernel_size_1, list):
+                kernel_size_1 = f"{kernel_size_1[0]}\n{kernel_size_1[1]}"
+
+            if isinstance(kernel_size_2, list):
+                kernel_size_2 = f"{kernel_size_2[0]}\n{kernel_size_2[1]}"
+
             input_str = f"{kernel_size_1}\n{kernel_size_2}\n{input_str}"
 
         result = subprocess.run(
@@ -154,7 +161,7 @@ class BaseTester:
     async def run_experiment(
         self,
         binary_path: str,
-        kernel_sizes: List[List[Optional[int]]],
+        kernel_sizes: List[List[Optional[int, List[int]]]],
         lab_processor: BaseLabProcessor,
     ) -> pd.DataFrame:
         bin_name = os.path.splitext(os.path.basename(binary_path))[0]
