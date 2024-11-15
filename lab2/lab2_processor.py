@@ -39,7 +39,7 @@ class Lab2Processor(BaseLabProcessor):
             "AoE.png",
             "doom.png",
             "hf2.png",
-            "starcraft.png",
+            # "starcraft.png",
             "warcraft.png",
             "test_01.txt",
             "test_02.txt",
