@@ -8,7 +8,8 @@ from uuid import uuid4
 from tester import BaseLabProcessor
 from utils import download_file, ImgData
 
-NEW_LINE = '\n'
+NEW_LINE = "\n"
+
 
 class Lab2Processor(BaseLabProcessor):
     def __init__(
@@ -30,11 +31,27 @@ class Lab2Processor(BaseLabProcessor):
 
         # post proc param
         self.atol = atol
-        self.data2test_pre = (
-            glob(os.path.join(dir_to_data, "*.png"))
-            + glob(os.path.join(dir_to_data, "*.data"))
-            + glob(os.path.join(dir_to_data, "*.txt"))
-        ) + [
+
+        filenames = [
+            "98.data",
+            "test_01.txt",
+            "test_02.txt",
+            "lenna.png",
+            "57.data",
+            "95.data",
+            "99.data",
+            "02.data",
+            "96.data",
+            "97.data",
+        ]
+        self.data2test_pre = [os.path.join(dir_to_data, fn_i) for fn_i in filenames]
+
+        # self.data2test_pre = (
+        #     glob(os.path.join(dir_to_data, "*.png"))
+        #     + glob(os.path.join(dir_to_data, "*.data"))
+        #     + glob(os.path.join(dir_to_data, "*.txt"))
+        # )
+        self.data2test_pre += [
             download_file(
                 extra_link_to_png, save_dir=dir_to_data, filename=f"{str(uuid4())}.png"
             )
@@ -104,11 +121,21 @@ class Lab2Processor(BaseLabProcessor):
             hex_b = item_output_gt.hex.replace("\n", "").replace(" ", "")
             test_verification_result = bool(hex_a == hex_b)
             if not test_verification_result:
-                print(f"[verify_result] FAILED `verify_result`: `{task_result.data_name}`!")
-                print(f"[verify_result] [input_data.hex] {data_input_item.hex.replace(NEW_LINE, ' ')}")
-                print(f"[verify_result] [task_result.hex] {task_result.hex.replace(NEW_LINE, ' ')}")
-                print(f"[verify_result] [ground_truth.hex] {item_output_gt.hex.replace(NEW_LINE, ' ')}")
-                print(f"[verify_result] SHOULD BE `task_result.hex` == `ground_truth.hex`!!!")
+                print(
+                    f"[verify_result] FAILED `verify_result`: `{task_result.data_name}`!"
+                )
+                print(
+                    f"[verify_result] [input_data.hex] {data_input_item.hex.replace(NEW_LINE, ' ')}"
+                )
+                print(
+                    f"[verify_result] [task_result.hex] {task_result.hex.replace(NEW_LINE, ' ')}"
+                )
+                print(
+                    f"[verify_result] [ground_truth.hex] {item_output_gt.hex.replace(NEW_LINE, ' ')}"
+                )
+                print(
+                    f"[verify_result] SHOULD BE `task_result.hex` == `ground_truth.hex`!!!"
+                )
 
         # TODO: Compare `item_res` and `item_output_gt` in another way
         return test_verification_result
