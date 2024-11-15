@@ -208,18 +208,18 @@ class BaseTester:
                 print(f"result is None")
                 raise
             result_dict = asdict(result)
-            print(
-                f"[DEBUG INFO] type(result)={type(result)}; result={result}"
-            )
-            print(
-                f"[DEBUG INFO] tasks[task_i]: type(tasks[task_i])={type(tasks[task_i])};"
-            )
-            print(
-                f"[DEBUG INFO] tasks[task_i]: type(tasks)={type(tasks)}; type(task_i)={type(task_i)}; task_i={task_i}"
-            )
-            print(
-                f"[DEBUG INFO] tasks[task_i]: type(tasks[task_i])={type(tasks[task_i])};"
-            )
+            # print(
+            #     f"[DEBUG INFO] type(result)={type(result)}; result={result}"
+            # )
+            # print(
+            #     f"[DEBUG INFO] tasks[task_i]: type(tasks[task_i])={type(tasks[task_i])};"
+            # )
+            # print(
+            #     f"[DEBUG INFO] tasks[task_i]: type(tasks)={type(tasks)}; type(task_i)={type(task_i)}; task_i={task_i}"
+            # )
+            # print(
+            #     f"[DEBUG INFO] tasks[task_i]: type(tasks[task_i])={type(tasks[task_i])};"
+            # )
             tasks[task_i] = {
                 **tasks[task_i],
                 **{k: v for k, v in result_dict.items() if k != "debug_data"},
