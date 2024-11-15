@@ -35,6 +35,7 @@ class Lab2Processor(BaseLabProcessor):
 
         filenames = [
             "98.data",
+            "hf2.png",
             "test_01.txt",
             "test_02.txt",
             "lenna.png",
