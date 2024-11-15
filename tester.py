@@ -5,7 +5,7 @@ import re
 import subprocess
 import time
 from dataclasses import dataclass, asdict
-from typing import List, Optional, Any, Dict, Tuple
+from typing import List, Optional, Any, Dict, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -91,8 +91,8 @@ async def run_subprocess(
     binary_path: str,
     lab_processor: BaseLabProcessor,
     return_inp: bool,
-    kernel_size_1: Optional[int, List[int]] = None,
-    kernel_size_2: Optional[int, List[int]] = None,
+    kernel_size_1: Optional[Union[int, List[int]]] = None,
+    kernel_size_2: Optional[Union[int, List[int]]] = None,
 ) -> SubProcessResult:
     try:
         input_str, inter_data_to_verify, debug_data = await lab_processor.pre_process()
@@ -143,7 +143,7 @@ class BaseTester:
         self,
         binary_path_cuda: str,
         k_times: int,
-        kernel_sizes: List[List[Optional[int]]],
+        kernel_sizes: List[List[Union[Optional[int], List[int]]]],
         metadata_columns2plot: List[str],
         binary_path_cpu: Optional[str] = None,
         return_inp: bool = False,
@@ -161,7 +161,7 @@ class BaseTester:
     async def run_experiment(
         self,
         binary_path: str,
-        kernel_sizes: List[List[Optional[int, List[int]]]],
+        kernel_sizes: List[List[Union[Optional[int, List[int]]]]],
         lab_processor: BaseLabProcessor,
     ) -> pd.DataFrame:
         bin_name = os.path.splitext(os.path.basename(binary_path))[0]
