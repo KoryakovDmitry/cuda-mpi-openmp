@@ -238,14 +238,16 @@ class BaseTester:
                 f'[Experiment bin_name=<{bin_name}> task={tasks[task_i]["idx_run_time"]} kernel_size=<{tasks[task_i]["kernel_size"]}>] finished with `time_kernel_exe_ms`: {tasks[task_i]["time_kernel_exe_ms"]} ms'
             )
 
+        filtter = (
+            ("time_st", "task")
+            if self.return_task_res
+            else ("time_st", "task", "task_result")
+        )
+
         if all(item.get("test_verification_result") for item in tasks):
             # print stats
             await print_stat_time([item.get("time_kernel_exe_ms") for item in tasks])
-            filtter = (
-                ("time_st", "task")
-                if self.return_task_res
-                else ("time_st", "task", "task_result")
-            )
+
             df_scores = pd.DataFrame(
                 [{k: v for k, v in item.items() if k not in filtter} for item in tasks]
             )
@@ -256,7 +258,7 @@ class BaseTester:
         else:
             df_failed = pd.DataFrame(
                 [
-                    {k: v for k, v in item.items() if k not in ("time_st", "task")}
+                    {k: v for k, v in item.items() if k not in filtter}
                     for item in tasks
                     if not item.get("test_verification_result")
                 ]
