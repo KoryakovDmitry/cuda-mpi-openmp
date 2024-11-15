@@ -4,6 +4,8 @@ import os
 import re
 import subprocess
 import time
+import traceback
+
 from dataclasses import dataclass, asdict
 from typing import List, Optional, Any, Dict, Tuple, Union
 
@@ -137,6 +139,17 @@ async def run_subprocess(
             err=err,
         )
 
+    except Exception as e:
+        err = traceback.format_exc()
+        return SubProcessResult(
+            test_verification_result=None,
+            task_result=None,
+            time_kernel_exe_ms=None,
+            debug_data=None,
+            status=False,
+            err=err,
+        )
+
 
 class BaseTester:
     def __init__(
@@ -193,35 +206,27 @@ class BaseTester:
                     }
                 )
 
-        # Process tasks concurrently
-        results = await asyncio.gather(
-            *[task["task"] for task in tasks], return_exceptions=True
-        )
-
-        for task_i, result in enumerate(results):
-            # try:
-            if isinstance(result, Exception):
-                raise result  # Re-raise the exception to handle it below
-
+        for task_i in range(len(tasks)):
+            result: SubProcessResult = await tasks[task_i]["task"]
             result_dict = asdict(result)
-            tasks[task_i].update(
-                {
-                    **{k: v for k, v in result_dict.items() if k != "debug_data"},
-                    **lab_processor.get_attr(),
-                    **result.debug_data,
-                    "time_exe_ms_from_start_run_time_bin_name": (
-                        time.time() - tasks[task_i]["time_st"]
-                    )
-                    * 1000,
-                }
-            )
-
             print(
-                f'[Experiment bin_name=<{bin_name}> task={tasks[task_i]["idx_run_time"]} kernel_size=<{tasks[task_i]["kernel_size"]}>] finished with `time_kernel_exe_ms`: {tasks[task_i].get("time_kernel_exe_ms")} ms'
+                f"[DEBUG INFO] tasks[task_i]: type(tasks)={type(tasks)}; type(task_i)={type(task_i)}; task_i={task_i}"
             )
-            # except Exception as e:
-            #     print(f"[ERROR] Task {task_i} failed: {e}")
-            #     tasks[task_i]["err"] = str(e)
+            print(
+                f"[DEBUG INFO] tasks[task_i]: type(tasks[task_i])={type(tasks[task_i])};"
+            )
+            tasks[task_i] = {
+                **tasks[task_i],
+                **{k: v for k, v in result_dict.items() if k != "debug_data"},
+                **lab_processor.get_attr(),
+                **result.debug_data,
+            }
+            tasks[task_i]["time_exe_ms_from_start_run_time_bin_name"] = (
+                time.time() - tasks[task_i]["time_st"]
+            ) * 1000
+            print(
+                f'[Experiment bin_name=<{bin_name}> task={tasks[task_i]["idx_run_time"]} kernel_size=<{tasks[task_i]["kernel_size"]}>] finished with `time_kernel_exe_ms`: {tasks[task_i]["time_kernel_exe_ms"]} ms'
+            )
 
         if all(item.get("test_verification_result") for item in tasks):
             # print stats
