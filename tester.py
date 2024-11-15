@@ -19,6 +19,7 @@ TIME_KERNEL_EXE_PATTERN = r"execution time: <([\d.]+) ms>"
 async def get_time_kernel_exe(
     text: str, pattern: str = TIME_KERNEL_EXE_PATTERN
 ) -> Optional[float]:
+    print(f"[DEBUG INFO] re.search(pattern, text): re.search({pattern}, {text})")
     match = re.search(pattern, text)
     if match:
         time_ms = float(match.group(1))
