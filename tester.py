@@ -141,15 +141,7 @@ async def run_subprocess(
 
     except Exception as e:
         err = traceback.format_exc()
-        traceback.print_exc()
-        return SubProcessResult(
-            test_verification_result=None,
-            task_result=None,
-            time_kernel_exe_ms=None,
-            debug_data=None,
-            status=False,
-            err=err,
-        )
+        return err
 
 
 class BaseTester:
@@ -208,7 +200,13 @@ class BaseTester:
                 )
 
         for task_i in range(len(tasks)):
-            result: SubProcessResult = await tasks[task_i]["task"]
+            result: SubProcessResult | str = await tasks[task_i]["task"]
+            if isinstance(result, str):
+                print(result)
+                raise
+            if isinstance(result, None):
+                print(f"result is None")
+                raise
             result_dict = asdict(result)
             print(
                 f"[DEBUG INFO] tasks[task_i]: type(tasks)={type(tasks)}; type(task_i)={type(task_i)}; task_i={task_i}"
