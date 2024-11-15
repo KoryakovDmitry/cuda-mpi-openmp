@@ -352,7 +352,7 @@ class BaseTester:
         legend_text = ""
         for col in self.metadata_columns2plot:
             unique_values = df_scores[col].unique()
-            unique_values_str = ", ".join(map(str, unique_values))
+            unique_values_str = ", \n".join(map(str, unique_values))
             legend_text += f"{col}: [{unique_values_str}]\n"
 
         # Add sample count information to the legend
