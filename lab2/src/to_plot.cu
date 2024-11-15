@@ -49,7 +49,7 @@ __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
             G_b = min(max(G_b, 0), 255);
 
             // Set the output pixel value with alpha channel set to zero
-            out[y * w + x] = make_uchar4(G_r, G_g, G_b, 0);
+            out[y * w + x] = make_uchar4(G_r, G_g, G_b, p.w);
         }
     }
 }
