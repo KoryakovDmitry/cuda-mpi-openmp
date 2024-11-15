@@ -6,6 +6,8 @@ import struct
 
 from PIL import Image
 
+from utils import get_size
+
 
 class ImgData:
     def __init__(self, path2data: str, idx = None):
@@ -16,6 +18,7 @@ class ImgData:
         self.hex_path = None
         self.png = None
         self.png_path = None
+        self.size = None
 
         assert os.path.exists(path2data), f"os.path.exists({path2data}) is False"
         self.dir2save = os.path.dirname(path2data)
@@ -49,6 +52,8 @@ class ImgData:
             raise ValueError(
                 f"`path2data` should endwith '.data' OR '.png' OR '.txt'. \nNOW: `path2data`={path2data}"
             )
+
+        self.size: float = get_size(self.c_data_bytes) # KB
 
     def _from_c_data_file(self, path2data: str) -> bytes:
         with open(path2data, "rb") as f:

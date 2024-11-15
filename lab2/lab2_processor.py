@@ -114,7 +114,7 @@ class Lab2Processor(BaseLabProcessor):
                 "out_path_res": out_path_res,
             },
             {
-                "filename": f"{next_item.data_name}{next_item.data_ext}",
+                "filename": f"{next_item.data_name}{next_item.data_ext} ({next_item.size:.5f} KB)",
             },
         )
 
