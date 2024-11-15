@@ -100,7 +100,8 @@ async def run_subprocess(
 ) -> SubProcessResult:
     debug_data = None
     try:
-        input_str, inter_data_to_verify, debug_data = await lab_processor.pre_process()
+        device_info = f"{os.path.basename(binary_path)}_{kernel_size_1}_{kernel_size_2}"
+        input_str, inter_data_to_verify, debug_data = await lab_processor.pre_process(device_info=device_info)
         if kernel_size_1 and kernel_size_2:
 
             if isinstance(kernel_size_1, list):

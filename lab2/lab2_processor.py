@@ -98,10 +98,15 @@ class Lab2Processor(BaseLabProcessor):
             return item
 
     async def pre_process(
-        self,
+        self, **kwargs
     ):
+        device_info = kwargs.get(f"device_info")
+        dir_to_data_out_with_device = os.path.join(self.dir_to_data_out, device_info)
+        if not os.path.exists(dir_to_data_out_with_device):
+            os.makedirs(dir_to_data_out_with_device, exist_ok=True)
+
         next_item = await self.get_next_item()
-        out_path_res = os.path.join(self.dir_to_data_out, f"{next_item.data_name}.data")
+        out_path_res = os.path.join(dir_to_data_out_with_device, f"{next_item.data_name}.data")
         return (
             f"{next_item.c_data_bytes_path}\n{out_path_res}",
             {
