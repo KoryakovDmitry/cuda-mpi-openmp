@@ -103,7 +103,7 @@ int main() {
     CSC(cudaEventDestroy(start));
     CSC(cudaEventDestroy(stop));
 
-    printf("CUDA execution time: %f ms\n", t);
+//     printf("CUDA execution time: %f ms\n", t);
 
     fp = fopen(outputFilepath, "wb");
     fwrite(&w, sizeof(int), 1, fp);
