@@ -34,14 +34,14 @@ class ImgData:
             self.c_data_bytes: bytes = self._from_png_file(path2data)
             self.c_data_bytes_path: str = self._to_c_data_file()
             self.hex = self._to_hex()
-            self.png = self._to_png()
+            # self.png = self._to_png()
             self.hex_path = self._to_hex_file(self.hex)
             self.png_path = path2data
 
         elif path2data.endswith(".txt"):
             self.c_data_bytes: bytes = self._from_hex_file(path2data)
             self.c_data_bytes_path: str = self._to_c_data_file()
-            self.hex = self._to_hex()
+            # self.hex = self._to_hex()
             self.png = self._to_png()
             self.png_path = self._to_png_file(self.png)
             self.hex_path = path2data
@@ -87,6 +87,7 @@ class ImgData:
 
     def _from_png_file(self, path2data: str) -> bytes:
         img = Image.open(path2data)
+        self.png = img
         (w, h) = img.size[0:2]
         pix = img.load()
         buff = ctypes.create_string_buffer(8 + 4 * w * h)
@@ -111,6 +112,7 @@ class ImgData:
 
         # Clean the hex data by removing spaces and newlines
         hex_data_cleaned = hex_data.replace("\n", "").replace(" ", "")
+        self.hex = hex_data.replace("", " ")
 
         # Convert the hex data to binary format
         binary_data = binascii.unhexlify(hex_data_cleaned)
