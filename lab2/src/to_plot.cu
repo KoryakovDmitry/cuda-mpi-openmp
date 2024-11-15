@@ -116,6 +116,6 @@ int main() {
     fwrite(data, sizeof(uchar4), w * h, fp);
     fclose(fp);
     free(data);
-    printf("FINISHED!");
+    printf("FINISHED!\n");
     return 0;
 }
