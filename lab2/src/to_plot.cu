@@ -22,14 +22,10 @@ __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
     for (int y = idy; y < h; y += offsety) {
         for (int x = idx; x < w; x += offsetx) {
             // Read pixel values from the texture
-            x = max(min(x, w), 1);
-            y = max(min(y, h), 1);
-            x_1 = max(min(x + 1, w), 1);
-            y_1 = max(min(y + 1, h), 1);
             uchar4 p00 = tex2D<uchar4>(tex, x, y);
-            uchar4 p10 = tex2D<uchar4>(tex, x_1, y);
-            uchar4 p01 = tex2D<uchar4>(tex, x, y_1);
-            uchar4 p11 = tex2D<uchar4>(tex, x_1, y_1);
+            uchar4 p10 = tex2D<uchar4>(tex, x + 1, y);
+            uchar4 p01 = tex2D<uchar4>(tex, x, y + 1);
+            uchar4 p11 = tex2D<uchar4>(tex, x + 1, y + 1);
 
             // Convert RGB to luminance (grayscale)
             float Y00 = 0.299f * p00.x + 0.587f * p00.y + 0.114f * p00.z;
