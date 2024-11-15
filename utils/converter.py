@@ -5,8 +5,12 @@ import os
 import struct
 
 from PIL import Image
+import sys
 
-from utils import get_size
+
+def get_size(byte_data: bytes) -> float:
+    size_in_bytes = sys.getsizeof(byte_data)
+    return size_in_bytes / 1024  # KB
 
 
 class ImgData:

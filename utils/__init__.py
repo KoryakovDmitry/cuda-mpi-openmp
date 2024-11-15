@@ -1,3 +1,2 @@
 from .download_files import download_file
-from .converter import ImgData
-from .utils import get_size
+from .converter import ImgData, get_size
