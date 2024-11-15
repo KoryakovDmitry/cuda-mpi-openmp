@@ -20,40 +20,33 @@ __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
 
     for (int y = idy; y < h; y += offsety) {
         for (int x = idx; x < w; x += offsetx) {
-            // Read neighboring pixels using texture fetching with clamped addressing
-            uchar4 w11 = tex2D<uchar4>(tex, x, y);
-            uchar4 w12 = tex2D<uchar4>(tex, x + 1, y);
-            uchar4 w21 = tex2D<uchar4>(tex, x, y + 1);
-            uchar4 w22 = tex2D<uchar4>(tex, x + 1, y + 1);
+            // Read pixel values from the texture
+            uchar4 p00 = tex2D<uchar4>(tex, x, y);
+            uchar4 p10 = tex2D<uchar4>(tex, x + 1, y);
+            uchar4 p01 = tex2D<uchar4>(tex, x, y + 1);
+            uchar4 p11 = tex2D<uchar4>(tex, x + 1, y + 1);
 
-            // Compute Gx and Gy for each color channel
-            int Gx_R = int(w22.x) - int(w11.x);
-            int Gy_R = int(w21.x) - int(w12.x);
-            int Gx_G = int(w22.y) - int(w11.y);
-            int Gy_G = int(w21.y) - int(w12.y);
-            int Gx_B = int(w22.z) - int(w11.z);
-            int Gy_B = int(w21.z) - int(w12.z);
+            // Convert RGB to luminance (grayscale)
+            float Y00 = 0.299f * p00.x + 0.587f * p00.y + 0.114f * p00.z;
+            float Y10 = 0.299f * p10.x + 0.587f * p10.y + 0.114f * p10.z;
+            float Y01 = 0.299f * p01.x + 0.587f * p01.y + 0.114f * p01.z;
+            float Y11 = 0.299f * p11.x + 0.587f * p11.y + 0.114f * p11.z;
 
-            // Compute gradient magnitude for each channel
-            int grad_R = abs(Gx_R) + abs(Gy_R);
-            int grad_G = abs(Gx_G) + abs(Gy_G);
-            int grad_B = abs(Gx_B) + abs(Gy_B);
+            // Apply the Roberts operator
+            float Gx = Y00 - Y11;   // Gradient in x-direction
+            float Gy = Y10 - Y01;   // Gradient in y-direction
 
-            // Average the gradients and normalize
-            int grad = (grad_R + grad_G + grad_B) / 3;
+            // Calculate the gradient magnitude
+            float G = sqrtf(Gx * Gx + Gy * Gy);
 
-            // Threshold the gradient to match expected output (values of 0 or 128)
-            if (grad != 0)
-                grad = 128;
-            else
-                grad = 0;
+            // Clamp the result to [0, 255]
+            G = fminf(fmaxf(G, 0.0f), 255.0f);
 
-            // Set the output pixel with R == G == B == grad and alpha == 0
-            uchar4 res;
-            res.x = res.y = res.z = grad;
-            res.w = 0; // Set alpha to 0 as per the ground truth
+            // Convert to unsigned char with rounding
+            unsigned char res = static_cast<unsigned char>(G + 0.5f);
 
-            out[y * w + x] = res;
+            // Set the output pixel
+            out[y * w + x] = make_uchar4(res, res, res, 255);
         }
     }
 }
