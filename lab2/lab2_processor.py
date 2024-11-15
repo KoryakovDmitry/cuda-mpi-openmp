@@ -118,21 +118,21 @@ class Lab2Processor(BaseLabProcessor):
         if idx_data in self.data_output_gt:
             item_output_gt: ImgData = self.data_output_gt[idx_data]
             data_input_item: ImgData = self.data_input[idx_data]
-            hex_a = task_result.hex.replace("\n", "").replace(" ", "")
-            hex_b = item_output_gt.hex.replace("\n", "").replace(" ", "")
+            hex_a = task_result.hex.replace("\n", "").replace(" ", "").upper()
+            hex_b = item_output_gt.hex.replace("\n", "").replace(" ", "").upper()
             test_verification_result = bool(hex_a == hex_b)
             if not test_verification_result:
                 print(
                     f"[verify_result] FAILED `verify_result`: `{task_result.data_name}`!"
                 )
                 print(
-                    f"[verify_result] [input_data.hex] {data_input_item.hex.replace(NEW_LINE, ' ')}"
+                    f"[verify_result] [input_data.hex] {data_input_item.hex.replace(NEW_LINE, ' ').upper()}"
                 )
                 print(
-                    f"[verify_result] [task_result.hex] {task_result.hex.replace(NEW_LINE, ' ')}"
+                    f"[verify_result] [task_result.hex] {task_result.hex.replace(NEW_LINE, ' ').upper()}"
                 )
                 print(
-                    f"[verify_result] [ground_truth.hex] {item_output_gt.hex.replace(NEW_LINE, ' ')}"
+                    f"[verify_result] [ground_truth.hex] {item_output_gt.hex.replace(NEW_LINE, ' ').upper()}"
                 )
                 print(
                     f"[verify_result] SHOULD BE `task_result.hex` == `ground_truth.hex`!!!"
