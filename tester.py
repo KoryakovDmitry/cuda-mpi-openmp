@@ -101,7 +101,15 @@ async def run_subprocess(
     debug_data = None
     try:
         device_info = f"{os.path.basename(binary_path)}_{kernel_size_1}_{kernel_size_2}"
-        input_str, inter_data_to_verify, debug_data = await lab_processor.pre_process(device_info=device_info)
+        device_info = (
+            device_info.replace(", ", "_")
+            .replace(" ", "_")
+            .replace("[", "_")
+            .replace("[", "_")
+        )
+        input_str, inter_data_to_verify, debug_data = await lab_processor.pre_process(
+            device_info=device_info
+        )
         if kernel_size_1 and kernel_size_2:
 
             if isinstance(kernel_size_1, list):
@@ -232,7 +240,9 @@ class BaseTester:
                 **tasks[task_i],
                 **{k: v for k, v in result_dict.items() if k != "debug_data"},
                 **lab_processor.get_attr(),
-                **(result.debug_data if isinstance(result.debug_data, dict) else dict()),
+                **(
+                    result.debug_data if isinstance(result.debug_data, dict) else dict()
+                ),
             }
             tasks[task_i]["time_exe_ms_from_start_run_time_bin_name"] = (
                 time.time() - tasks[task_i]["time_st"]
