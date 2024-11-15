@@ -130,6 +130,7 @@ async def run_subprocess(
         )
     except subprocess.CalledProcessError as e:
         err = e.stderr.strip()
+        print(f"[CUDA ERROR] {err}")
         return SubProcessResult(
             test_verification_result=None,
             task_result=None,
@@ -141,6 +142,7 @@ async def run_subprocess(
 
     except Exception as e:
         err = traceback.format_exc()
+        traceback.print_exc()
         return SubProcessResult(
             test_verification_result=None,
             task_result=None,
