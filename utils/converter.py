@@ -34,13 +34,17 @@ class ImgData:
             self.c_data_bytes: bytes = self._from_png_file(path2data)
             self.c_data_bytes_path: str = self._to_c_data_file()
             self.hex = self._to_hex()
+            self.png = self._to_png()
             self.hex_path = self._to_hex_file(self.hex)
+            self.png_path = path2data
 
         elif path2data.endswith(".txt"):
             self.c_data_bytes: bytes = self._from_hex_file(path2data)
             self.c_data_bytes_path: str = self._to_c_data_file()
+            self.hex = self._to_hex()
             self.png = self._to_png()
             self.png_path = self._to_png_file(self.png)
+            self.hex_path = path2data
         else:
             raise ValueError(
                 f"`path2data` should endwith '.data' OR '.png' OR '.txt'. \nNOW: `path2data`={path2data}"
