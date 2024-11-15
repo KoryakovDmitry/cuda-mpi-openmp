@@ -40,7 +40,7 @@ __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
             float G = sqrtf(Gx * Gx + Gy * Gy);
 
             // Clamp the result to [0, 255]
-            G = fminf(fmaxf(G, 0.0f), 255.0f);
+            // G = fminf(fmaxf(G, 0.0f), 255.0f);
 
             // Convert to unsigned char
             unsigned char res = static_cast<unsigned char>(G);

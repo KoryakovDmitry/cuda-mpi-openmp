@@ -13,39 +13,40 @@
     } while (0)
 
 __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
-    int x = blockDim.x * blockIdx.x + threadIdx.x;
-    int y = blockDim.y * blockIdx.y + threadIdx.y;
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int idy = blockDim.y * blockIdx.y + threadIdx.y;
     int offsetx = blockDim.x * gridDim.x;
     int offsety = blockDim.y * gridDim.y;
 
-    for (int j = y; j < h - 1; j += offsety) {  // Adjusted loop bounds
-        for (int i = x; i < w - 1; i += offsetx) {
-            // Read the pixel values from the texture
-            uchar4 w11 = tex2D<uchar4>(tex, i, j);
-            uchar4 w12 = tex2D<uchar4>(tex, i + 1, j);
-            uchar4 w21 = tex2D<uchar4>(tex, i, j + 1);
-            uchar4 w22 = tex2D<uchar4>(tex, i + 1, j + 1);
+    for (int y = idy; y < h; y += offsety) {
+        for (int x = idx; x < w; x += offsetx) {
+            // Read pixel values from the texture
+            uchar4 p00 = tex2D<uchar4>(tex, x, y);
+            uchar4 p10 = tex2D<uchar4>(tex, x + 1, y);
+            uchar4 p01 = tex2D<uchar4>(tex, x, y + 1);
+            uchar4 p11 = tex2D<uchar4>(tex, x + 1, y + 1);
 
-            // Compute Gx and Gy for each color channel
-            int Gx_r = (int)w22.x - (int)w11.x;
-            int Gy_r = (int)w21.x - (int)w12.x;
-            int Gx_g = (int)w22.y - (int)w11.y;
-            int Gy_g = (int)w21.y - (int)w12.y;
-            int Gx_b = (int)w22.z - (int)w11.z;
-            int Gy_b = (int)w21.z - (int)w12.z;
+            // Convert RGB to luminance (grayscale)
+            float Y00 = 0.299f * p00.x + 0.587f * p00.y + 0.114f * p00.z;
+            float Y10 = 0.299f * p10.x + 0.587f * p10.y + 0.114f * p10.z;
+            float Y01 = 0.299f * p01.x + 0.587f * p01.y + 0.114f * p01.z;
+            float Y11 = 0.299f * p11.x + 0.587f * p11.y + 0.114f * p11.z;
 
-            // Compute the gradient magnitude for each channel
-            int G_r = (int)sqrtf(Gx_r * Gx_r + Gy_r * Gy_r);
-            int G_g = (int)sqrtf(Gx_g * Gx_g + Gy_g * Gy_g);
-            int G_b = (int)sqrtf(Gx_b * Gx_b + Gy_b * Gy_b);
+            // Apply the Roberts operator
+            float Gx = Y11 - Y00;   // Gradient in x-direction
+            float Gy = Y10 - Y01;   // Gradient in y-direction
 
-            // Clamp the values to [0, 255]
-            G_r = min(max(G_r, 0), 255);
-            G_g = min(max(G_g, 0), 255);
-            G_b = min(max(G_b, 0), 255);
+            // Calculate the gradient magnitude
+            float G = sqrtf(Gx * Gx + Gy * Gy);
 
-            // Set the output pixel value
-            out[j * w + i] = make_uchar4(G_r, G_g, G_b, w11.w);
+            // Clamp the result to [0, 255]
+            // G = fminf(fmaxf(G, 0.0f), 255.0f);
+
+            // Convert to unsigned char
+            unsigned char res = static_cast<unsigned char>(G);
+
+            // Set the output pixel
+            out[y * w + x] = make_uchar4(res, res, res, p00.w);
         }
     }
 }
