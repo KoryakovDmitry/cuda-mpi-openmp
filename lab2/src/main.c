@@ -40,7 +40,7 @@ void processImage(const uchar4 *data, uchar4 *out, int w, int h) {
             float Gy = Y10 - Y01;   // Gradient in y-direction
 
             // Calculate the gradient magnitude
-            float G = sqrtf(Gx * Gx + Gy * Gy);
+            float G = sqrt(Gx * Gx + Gy * Gy);
 
             // Clamp the result to [0, 255]
             if (G < 0.0f) G = 0.0f;
