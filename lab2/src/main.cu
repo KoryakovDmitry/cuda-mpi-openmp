@@ -14,18 +14,29 @@
 
 __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h) {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
-	int idy = blockDim.y * blockIdx.y + threadIdx.y;
-   	int offsetx = blockDim.x * gridDim.x;
-	int offsety = blockDim.y * gridDim.y;
-    int x, y;
-    uchar4 p;
-    for(y = idy; y < h; y += offsety) {
-		for(x = idx; x < w; x += offsetx) {
-            p = tex2D<uchar4>(tex, x / w, y / h);
-            // YOUR CODE. TASK: Выделение контуров. Метод Робертса.
-            // out[y * w + x] = // YOUR CODE
-            out[y * w + x] = make_uchar4(255 - p.x, 255 - p.y, 255 - p.z, p.w);
-        };
+    int idy = blockDim.y * blockIdx.y + threadIdx.y;
+    int offsetx = blockDim.x * gridDim.x;
+    int offsety = blockDim.y * gridDim.y;
+
+    for (int y = idy; y < h; y += offsety) {
+        for (int x = idx; x < w; x += offsetx) {
+            uchar4 p = tex2D<uchar4>(tex, x, y);
+            uchar4 px = tex2D<uchar4>(tex, x + 1, y);
+            uchar4 py = tex2D<uchar4>(tex, x, y + 1);
+            uchar4 pxy = tex2D<uchar4>(tex, x + 1, y + 1);
+
+            int gx_r = abs(p.x - pxy.x) + abs(px.x - py.x);
+            int gx_g = abs(p.y - pxy.y) + abs(px.y - py.y);
+            int gx_b = abs(p.z - pxy.z) + abs(px.z - py.z);
+
+            uchar4 result;
+            result.x = min(gx_r, 255);  // Clamp the result to 255
+            result.y = min(gx_g, 255);
+            result.z = min(gx_b, 255);
+            result.w = 255;  // Alpha channel remains fully opaque
+
+            out[y * w + x] = result;
+        }
     }
 }
 
@@ -37,9 +48,9 @@ int main() {
     scanf("%1024s", outputFilepath);
 
     FILE *fp = fopen(inputFilepath, "rb");
- 	fread(&w, sizeof(int), 1, fp);
-	fread(&h, sizeof(int), 1, fp);
- 	uchar4 *data = (uchar4 *)malloc(sizeof(uchar4) * w * h);
+    fread(&w, sizeof(int), 1, fp);
+    fread(&h, sizeof(int), 1, fp);
+    uchar4 *data = (uchar4 *)malloc(sizeof(uchar4) * w * h);
     fread(data, sizeof(uchar4), w * h, fp);
     fclose(fp);
 
@@ -55,33 +66,37 @@ int main() {
 
     struct cudaTextureDesc texDesc;
     memset(&texDesc, 0, sizeof(texDesc));
-    texDesc.addressMode[0] = cudaAddressModeWrap;
+    texDesc.addressMode[0] = cudaAddressModeClamp;
     texDesc.addressMode[1] = cudaAddressModeClamp;
     texDesc.filterMode = cudaFilterModePoint;
     texDesc.readMode = cudaReadModeElementType;
-    texDesc.normalizedCoords = true;
+    texDesc.normalizedCoords = false;
 
     cudaTextureObject_t tex = 0;
     CSC(cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL));
 
     uchar4 *dev_out;
-	CSC(cudaMalloc(&dev_out, sizeof(uchar4) * w * h));
+    CSC(cudaMalloc(&dev_out, sizeof(uchar4) * w * h));
 
     cudaEvent_t start, stop;
     CSC(cudaEventCreate(&start));
     CSC(cudaEventCreate(&stop));
 
     CSC(cudaEventRecord(start));
-    kernel<<<dim3(16, 16), dim3(32, 32)>>>(tex, dev_out, w, h);
+    const int BLOCK_SIZE_X = 32;
+    const int BLOCK_SIZE_Y = 32;
+    const int GRID_SIZE_X = 16;
+    const int GRID_SIZE_Y = 16;
+    kernel<<<dim3(GRID_SIZE_X, GRID_SIZE_Y), dim3(BLOCK_SIZE_X, BLOCK_SIZE_Y)>>>(tex, dev_out, w, h);
     CSC(cudaEventRecord(stop));
     CSC(cudaEventSynchronize(stop));
     CSC(cudaGetLastError());
 
     CSC(cudaMemcpy(data, dev_out, sizeof(uchar4) * w * h, cudaMemcpyDeviceToHost));
 
-	CSC(cudaDestroyTextureObject(tex));
-	CSC(cudaFreeArray(arr));
-	CSC(cudaFree(dev_out));
+    CSC(cudaDestroyTextureObject(tex));
+    CSC(cudaFreeArray(arr));
+    CSC(cudaFree(dev_out));
 
     float t;
     CSC(cudaEventElapsedTime(&t, start, stop));
@@ -91,10 +106,10 @@ int main() {
     printf("CUDA execution time: %f ms\n", t);
 
     fp = fopen(outputFilepath, "wb");
-	fwrite(&w, sizeof(int), 1, fp);
-	fwrite(&h, sizeof(int), 1, fp);
-	fwrite(data, sizeof(uchar4), w * h, fp);
-	fclose(fp);
+    fwrite(&w, sizeof(int), 1, fp);
+    fwrite(&h, sizeof(int), 1, fp);
+    fwrite(data, sizeof(uchar4), w * h, fp);
+    fclose(fp);
     free(data);
     return 0;
 }
