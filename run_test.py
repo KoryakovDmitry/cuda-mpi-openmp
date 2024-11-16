@@ -6,9 +6,14 @@ import os.path
 from arg_parsing import hundle_unkown
 from lab1.lab1_processor import Lab1Processor
 from lab2.lab2_processor import Lab2Processor
+from lab3.lab3_processor import Lab3Processor
 from tester import BaseTester
 
-MAP_LAB_PROCESSORS = {"lab1": Lab1Processor, "lab2": Lab2Processor, }
+MAP_LAB_PROCESSORS = {
+    "lab1": Lab1Processor,
+    "lab2": Lab2Processor,
+    "lab3": Lab3Processor,
+}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run kernel testing with subprocess.")
@@ -25,10 +30,10 @@ if __name__ == "__main__":
         "--k_times", type=int, help="Number of times to run the kernel.", default=20
     )
     parser.add_argument(
-        "--return_inp", help="Return input for binary.",action='store_true'
+        "--return_inp", help="Return input for binary.", action="store_true"
     )
     parser.add_argument(
-        "--return_task_res", help="Return the result of task.", action='store_true'
+        "--return_task_res", help="Return the result of task.", action="store_true"
     )
     parser.add_argument(
         "--kernel_sizes",
@@ -46,7 +51,9 @@ if __name__ == "__main__":
     args, unknown = parser.parse_known_args()
     kwargs = hundle_unkown(unknown)
     kernel_sizes = json.loads(args.kernel_sizes) if args.kernel_sizes else None
-    metadata_columns2plot = json.loads(args.metadata_columns2plot) if args.metadata_columns2plot else None
+    metadata_columns2plot = (
+        json.loads(args.metadata_columns2plot) if args.metadata_columns2plot else None
+    )
 
     lab_name: str = os.path.basename(
         os.path.dirname(os.path.dirname(args.binary_path_cuda))
@@ -70,7 +77,7 @@ if __name__ == "__main__":
         kernel_sizes=kernel_sizes,
         return_inp=args.return_inp,
         return_task_res=args.return_task_res,
-        metadata_columns2plot=metadata_columns2plot
+        metadata_columns2plot=metadata_columns2plot,
     )
     lab_processor = MAP_LAB_PROCESSORS[lab_name](**kwargs)
     asyncio.run(tester.run_experiments(lab_processor=lab_processor))
