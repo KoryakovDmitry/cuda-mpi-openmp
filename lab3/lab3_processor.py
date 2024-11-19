@@ -117,12 +117,12 @@ class Lab3Processor(BaseLabProcessor):
                 ]
 
             if not (
-                    (len(definition_classes) > MAX_CLASSES)
+                    (len(definition_classes) < MAX_CLASSES)
                     and (len(definition_classes) > 0)
             ):
                 raise ValueError(
-                    "SHOULD BE (len(definition_classes) > MAX_CLASSES) and (len(definition_classes) > 0)"
-                    f"NOW: ({len(definition_classes)} > {MAX_CLASSES}) and ({len(definition_classes)} > 0)"
+                    "SHOULD BE (len(definition_classes) < MAX_CLASSES) and (len(definition_classes) > 0)"
+                    f"NOW: ({len(definition_classes)} < {MAX_CLASSES}) and ({len(definition_classes)} > 0)"
                 )
 
             self.data_input[ii]: Tuple[ImgData, List[GroundTruthClass]] = (
