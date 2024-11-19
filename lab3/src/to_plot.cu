@@ -429,7 +429,7 @@ int main() {
     CSC(cudaFreeArray(arr));
     CSC(cudaFree(dev_out));
 
-//     printf("CUDA execution time: <%f ms>\n", total_kernel_time);
+    printf("CUDA execution time: <%f ms>\n", total_kernel_time);
 
     fp = fopen(outputFilepath, "wb");
     fwrite(&w, sizeof(int), 1, fp);
