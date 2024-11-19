@@ -16,8 +16,8 @@ class GroundTruthClass:
 def get_random_pts(w: int, h: int, count_pts: int = None) -> np.ndarray:
     if count_pts is None:
         count_pts = random.randint(1, MAX_NUM_POINTS + 1)
-    x_top_idx = np.random.randint(0, w + 1)
-    y_top_idx = np.random.randint(0, h + 1)
+    x_top_idx = np.random.randint(1, w + 1)
+    y_top_idx = np.random.randint(1, h + 1)
     x_row = np.random.randint(x_top_idx, size=(count_pts, 1))
     y_row = np.random.randint(y_top_idx, size=(count_pts, 1))
     # Concatenate x_row and y_row to create an array of shape (count_pts, 2)
