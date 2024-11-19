@@ -251,9 +251,9 @@ int main() {
     int w, h;
     int nc; // Number of classes
 
-    char inputFilepath[1024], outputFilepath[1024];
-    scanf("%1024s", inputFilepath);
-    scanf("%1024s", outputFilepath);
+    char inputFilepath[4096], outputFilepath[4096];
+    scanf("%4095s", inputFilepath);
+    scanf("%4095s", outputFilepath);
 
     // Reading the number of classes
     scanf("%d", &nc);
