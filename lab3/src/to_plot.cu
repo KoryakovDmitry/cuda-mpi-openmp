@@ -248,8 +248,17 @@ __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h, int n
 }
 
 int main() {
-    int w, h;
+    int w, h, block_size_x, block_size_y, grid_size_x, grid_size_y;
     int nc; // Number of classes
+
+    // set block_size_x
+    scanf("%d", &block_size_x);
+    // set block_size_y
+    scanf("%d", &block_size_y);
+    // set grid_size_x
+    scanf("%d", &grid_size_x);
+    // set grid_size_y
+    scanf("%d", &grid_size_y);
 
     char inputFilepath[1024], outputFilepath[1024];
     scanf("%1024s", inputFilepath);
@@ -377,10 +386,7 @@ int main() {
 
     float total_kernel_time = 0.0f; // Variable to accumulate kernel execution times
 
-    // Read sample pixels
-    int threadsPerBlock = 256;
-    int blocksPerGrid = 256;
-    MEASURE_KERNEL_TIME((read_sample_pixels<<<blocksPerGrid, threadsPerBlock>>>(tex, total_npj, d_coordinates_flat, d_sample_pixels)), total_kernel_time);
+    MEASURE_KERNEL_TIME((read_sample_pixels<<<block_size_x, grid_size_x>>>(tex, total_npj, d_coordinates_flat, d_sample_pixels)), total_kernel_time);
 
     // Compute sums
     float *d_sums_r, *d_sums_g, *d_sums_b;
@@ -391,7 +397,7 @@ int main() {
     CSC(cudaMemset(d_sums_g, 0, nc * sizeof(float)));
     CSC(cudaMemset(d_sums_b, 0, nc * sizeof(float)));
 
-    MEASURE_KERNEL_TIME((compute_sums<<<blocksPerGrid, threadsPerBlock>>>(total_npj, d_class_ids, d_sample_pixels, d_sums_r, d_sums_g, d_sums_b)), total_kernel_time);
+    MEASURE_KERNEL_TIME((compute_sums<<<block_size_x, grid_size_x>>>(total_npj, d_class_ids, d_sample_pixels, d_sums_r, d_sums_g, d_sums_b)), total_kernel_time);
 
     // Compute averages
     float *d_avg_r, *d_avg_g, *d_avg_b;
@@ -399,22 +405,22 @@ int main() {
     CSC(cudaMalloc(&d_avg_g, nc * sizeof(float)));
     CSC(cudaMalloc(&d_avg_b, nc * sizeof(float)));
 
-    MEASURE_KERNEL_TIME((compute_averages<<<blocksPerGrid, threadsPerBlock>>>(nc, d_sums_r, d_sums_g, d_sums_b, d_npjs, d_avg_r, d_avg_g, d_avg_b)), total_kernel_time);
+    MEASURE_KERNEL_TIME((compute_averages<<<block_size_x, grid_size_x>>>(nc, d_sums_r, d_sums_g, d_sums_b, d_npjs, d_avg_r, d_avg_g, d_avg_b)), total_kernel_time);
 
     // Compute covariance matrices
     float *d_covariance_matrices;
     CSC(cudaMalloc(&d_covariance_matrices, nc * 9 * sizeof(float)));
     CSC(cudaMemset(d_covariance_matrices, 0, nc * 9 * sizeof(float)));
 
-    MEASURE_KERNEL_TIME((compute_covariances<<<blocksPerGrid, threadsPerBlock>>>(total_npj, d_class_ids, d_sample_pixels, d_avg_r, d_avg_g, d_avg_b, d_covariance_matrices)), total_kernel_time);
+    MEASURE_KERNEL_TIME((compute_covariances<<<block_size_x, grid_size_x>>>(total_npj, d_class_ids, d_sample_pixels, d_avg_r, d_avg_g, d_avg_b, d_covariance_matrices)), total_kernel_time);
 
     // Finalize covariance matrices
-    MEASURE_KERNEL_TIME((finalize_covariances<<<blocksPerGrid, threadsPerBlock>>>(nc, d_covariance_matrices, d_npjs)), total_kernel_time);
+    MEASURE_KERNEL_TIME((finalize_covariances<<<block_size_x, grid_size_x>>>(nc, d_covariance_matrices, d_npjs)), total_kernel_time);
 
     // Invert covariance matrices
     float *d_inverse_covariance_matrices;
     CSC(cudaMalloc(&d_inverse_covariance_matrices, nc * 9 * sizeof(float)));
-    MEASURE_KERNEL_TIME((invert_covariances<<<blocksPerGrid, threadsPerBlock>>>(nc, d_covariance_matrices, d_inverse_covariance_matrices)), total_kernel_time);
+    MEASURE_KERNEL_TIME((invert_covariances<<<block_size_x, grid_size_x>>>(nc, d_covariance_matrices, d_inverse_covariance_matrices)), total_kernel_time);
 
     // Launch the main kernel
     const int BLOCK_SIZE_X = 32;
