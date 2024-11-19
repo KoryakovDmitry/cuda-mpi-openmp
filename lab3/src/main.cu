@@ -305,6 +305,7 @@ int main() {
 
     cudaArray *arr;
     cudaChannelFormatDesc ch = cudaCreateChannelDesc<uchar4>();
+    fprintf(stderr, "Invalid image dimensions: w=%d, h=%d\n", w, h);
     CSC(cudaMallocArray(&arr, &ch, w, h));
     CSC(cudaMemcpy2DToArray(arr, 0, 0, data, w * sizeof(uchar4), w * sizeof(uchar4), h, cudaMemcpyHostToDevice));
 
