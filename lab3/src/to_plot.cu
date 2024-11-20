@@ -270,14 +270,14 @@ int main() {
     // Memory allocation for the number of pixels in each class
     int *npjs = (int *)malloc(nc * sizeof(int));
     if (npjs == NULL) {
-        printf("Memory allocation error!\n");
+        fprintf(stderr, "Memory allocation error!\n");
         return 1;
     }
 
     // Arrays to store the coordinates of pixels (2D dynamic array)
     int **coordinates = (int **)malloc(nc * sizeof(int *));
     if (coordinates == NULL) {
-        printf("Memory allocation error!\n");
+        fprintf(stderr, "Memory allocation error!\n");
         free(npjs);
         return 1;
     }
@@ -290,7 +290,7 @@ int main() {
         // Allocating memory to store coordinates (npjs[c] pairs of numbers)
         coordinates[c] = (int *)malloc(npjs[c] * 2 * sizeof(int));
         if (coordinates[c] == NULL) {
-            printf("Memory allocation error!\n");
+            fprintf(stderr, "Memory allocation error!\n");
             for (int i = 0; i < c; i++) {
                 free(coordinates[i]);
             }
@@ -422,12 +422,7 @@ int main() {
     CSC(cudaMalloc(&d_inverse_covariance_matrices, nc * 9 * sizeof(float)));
     MEASURE_KERNEL_TIME((invert_covariances<<<block_size_x, grid_size_x>>>(nc, d_covariance_matrices, d_inverse_covariance_matrices)), total_kernel_time);
 
-    // Launch the main kernel
-    const int BLOCK_SIZE_X = 32;
-    const int BLOCK_SIZE_Y = 32;
-    const int GRID_SIZE_X = 16;
-    const int GRID_SIZE_Y = 16;
-    MEASURE_KERNEL_TIME((kernel<<<dim3(GRID_SIZE_X, GRID_SIZE_Y), dim3(BLOCK_SIZE_X, BLOCK_SIZE_Y)>>>(tex, dev_out, w, h, nc, d_avg_r, d_avg_g, d_avg_b, d_inverse_covariance_matrices)), total_kernel_time);
+    MEASURE_KERNEL_TIME((kernel<<<dim3(grid_size_x, grid_size_y), dim3(block_size_x, block_size_y)>>>(tex, dev_out, w, h, nc, d_avg_r, d_avg_g, d_avg_b, d_inverse_covariance_matrices)), total_kernel_time);
 
     CSC(cudaMemcpy(data, dev_out, sizeof(uchar4) * w * h, cudaMemcpyDeviceToHost));
 

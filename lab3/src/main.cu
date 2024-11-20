@@ -261,14 +261,14 @@ int main() {
     // Memory allocation for the number of pixels in each class
     int *npjs = (int *)malloc(nc * sizeof(int));
     if (npjs == NULL) {
-        printf("Memory allocation error!\n");
+        fprintf(stderr, "Memory allocation error!\n");
         return 1;
     }
 
     // Arrays to store the coordinates of pixels (2D dynamic array)
     int **coordinates = (int **)malloc(nc * sizeof(int *));
     if (coordinates == NULL) {
-        printf("Memory allocation error!\n");
+        fprintf(stderr, "Memory allocation error!\n");
         free(npjs);
         return 1;
     }
@@ -281,7 +281,7 @@ int main() {
         // Allocating memory to store coordinates (npjs[c] pairs of numbers)
         coordinates[c] = (int *)malloc(npjs[c] * 2 * sizeof(int));
         if (coordinates[c] == NULL) {
-            printf("Memory allocation error!\n");
+            fprintf(stderr, "Memory allocation error!\n");
             for (int i = 0; i < c; i++) {
                 free(coordinates[i]);
             }
@@ -305,7 +305,7 @@ int main() {
 
     cudaArray *arr;
     cudaChannelFormatDesc ch = cudaCreateChannelDesc<uchar4>();
-    // fprintf(stderr, "Image dimensions: w=%d, h=%d\n", w, h);
+    fprintf(stderr, "Image dimensions: w=%d, h=%d\n", w, h);
     CSC(cudaMallocArray(&arr, &ch, w, h)); // [ERROR CUDA] File: 'main.cu'; Line: 309; Message: invalid argument.
     CSC(cudaMemcpy2DToArray(arr, 0, 0, data, w * sizeof(uchar4), w * sizeof(uchar4), h, cudaMemcpyHostToDevice));
 
