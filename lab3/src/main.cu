@@ -305,8 +305,8 @@ int main() {
 
     cudaArray *arr;
     cudaChannelFormatDesc ch = cudaCreateChannelDesc<uchar4>();
-    fprintf(stderr, "Invalid image dimensions: w=%d, h=%d\n", w, h);
-    CSC(cudaMallocArray(&arr, &ch, w, h));
+    // fprintf(stderr, "Image dimensions: w=%d, h=%d\n", w, h);
+    CSC(cudaMallocArray(&arr, &ch, w, h)); // [ERROR CUDA] File: 'main.cu'; Line: 309; Message: invalid argument.
     CSC(cudaMemcpy2DToArray(arr, 0, 0, data, w * sizeof(uchar4), w * sizeof(uchar4), h, cudaMemcpyHostToDevice));
 
     struct cudaResourceDesc resDesc;
