@@ -755,6 +755,8 @@ int main() {
     fclose(fp);
     free(data);
 
+    printf("CUDA execution time: <%f ms>\n", total_kernel_time);
+
     // Free allocated memory
     free(npjs);
     free(offsets);
