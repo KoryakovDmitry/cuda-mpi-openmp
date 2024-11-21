@@ -82,9 +82,14 @@ int main() {
     int w, h, nc;
     char inputFilepath[4096], outputFilepath[4096];
 
-    // Reading input and output file paths
-    if (scanf("%4095s", inputFilepath) != 1 || scanf("%4095s", outputFilepath) != 1) {
-        fprintf(stderr, "Error reading file paths.\n");
+    // Reading input and output file paths with buffer size limits
+    if (scanf("%4095s", inputFilepath) != 1) {
+        fprintf(stderr, "Error reading input filepath.\n");
+        return 1;
+    }
+
+    if (scanf("%4095s", outputFilepath) != 1) {
+        fprintf(stderr, "Error reading output filepath.\n");
         return 1;
     }
 

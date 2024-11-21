@@ -102,10 +102,10 @@ int main() {
         fprintf(stderr, "Error reading output filepath.\n");
         return 1;
     }
-
-    // Reading the number of classes
-    if (scanf("%d", &nc) != 1) {
-        fprintf(stderr, "Error reading number of classes.\n");
+        // Open input file
+    FILE *input_file = fopen(inputFilepath, "rb");
+    if (!input_file) {
+        fprintf(stderr, "Error opening input file.\n");
         return 1;
     }
 
@@ -120,6 +120,12 @@ int main() {
     double3 h_avg[MAX_CLASSES];
     double h_covariance[MAX_CLASSES][3][3];
     double h_inv_covariance[MAX_CLASSES][3][3];
+
+    // Reading the number of classes
+    if (scanf("%d", &nc) != 1) {
+        fprintf(stderr, "Error reading number of classes.\n");
+        return 1;
+    }
 
     // Reading class information
     for (int c = 0; c < nc; ++c) {
