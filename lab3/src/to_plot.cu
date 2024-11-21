@@ -60,7 +60,7 @@ __device__ void invert_3x3_matrix(const float *a, float *inv_a) {
 }
 
 // Kernel to read sample pixel values
-__global__ void read_sample_pixels(cudaTextureObject_t tex, int total_npj, int *d_coordinates_flat, float3 *d_sample_pixels) {
+__global__ void read_sample_pixels(uchar4 *d_image, int w, int h, int total_npj, int *d_coordinates_flat, float3 *d_sample_pixels) {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (tid >= total_npj)
@@ -69,9 +69,13 @@ __global__ void read_sample_pixels(cudaTextureObject_t tex, int total_npj, int *
     int x = d_coordinates_flat[tid * 2];
     int y = d_coordinates_flat[tid * 2 + 1];
 
-    uchar4 p = tex2D<uchar4>(tex, x, y);
-
-    d_sample_pixels[tid] = make_float3((float)p.x, (float)p.y, (float)p.z);
+    // Check if x and y are within image bounds
+    if (x < 0 || x >= w || y < 0 || y >= h) {
+        d_sample_pixels[tid] = make_float3(0.0f, 0.0f, 0.0f);
+    } else {
+        uchar4 p = d_image[y * w + x];
+        d_sample_pixels[tid] = make_float3((float)p.x, (float)p.y, (float)p.z);
+    }
 }
 
 // Kernel to compute sums for means
@@ -192,7 +196,7 @@ __global__ void invert_covariances(int nc, float *d_covariance_matrices, float *
 }
 
 // Main kernel to compute Mahalanobis distances and assign class labels
-__global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h, int nc, float *d_avg_r, float *d_avg_g, float *d_avg_b, float *d_inverse_covariance_matrices) {
+__global__ void kernel(uchar4 *d_image, uchar4 *out, int w, int h, int nc, float *d_avg_r, float *d_avg_g, float *d_avg_b, float *d_inverse_covariance_matrices) {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int idy = blockDim.y * blockIdx.y + threadIdx.y;
     int offsetx = blockDim.x * gridDim.x;
@@ -200,8 +204,7 @@ __global__ void kernel(cudaTextureObject_t tex, uchar4 *out, int w, int h, int n
 
     for (int y = idy; y < h; y += offsety) {
         for (int x = idx; x < w; x += offsetx) {
-            // Read pixel values from the texture
-            uchar4 p_uchar = tex2D<uchar4>(tex, x, y);
+            uchar4 p_uchar = d_image[y * w + x];
             float3 p;
             p.x = (float)p_uchar.x;
             p.y = (float)p_uchar.y;
@@ -312,26 +315,10 @@ int main() {
     fread(data, sizeof(uchar4), w * h, fp);
     fclose(fp);
 
-    cudaArray *arr;
-    cudaChannelFormatDesc ch = cudaCreateChannelDesc<uchar4>();
-    CSC(cudaMallocArray(&arr, &ch, w, h));
-    CSC(cudaMemcpy2DToArray(arr, 0, 0, data, w * sizeof(uchar4), w * sizeof(uchar4), h, cudaMemcpyHostToDevice));
-
-    struct cudaResourceDesc resDesc;
-    memset(&resDesc, 0, sizeof(resDesc));
-    resDesc.resType = cudaResourceTypeArray;
-    resDesc.res.array.array = arr;
-
-    struct cudaTextureDesc texDesc;
-    memset(&texDesc, 0, sizeof(texDesc));
-    texDesc.addressMode[0] = cudaAddressModeClamp;
-    texDesc.addressMode[1] = cudaAddressModeClamp;
-    texDesc.filterMode = cudaFilterModePoint;
-    texDesc.readMode = cudaReadModeElementType;
-    texDesc.normalizedCoords = false;
-
-    cudaTextureObject_t tex = 0;
-    CSC(cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL));
+    // Allocate device memory for image data
+    uchar4 *d_image;
+    CSC(cudaMalloc(&d_image, w * h * sizeof(uchar4)));
+    CSC(cudaMemcpy(d_image, data, w * h * sizeof(uchar4), cudaMemcpyHostToDevice));
 
     uchar4 *dev_out;
     CSC(cudaMalloc(&dev_out, sizeof(uchar4) * w * h));
@@ -386,7 +373,8 @@ int main() {
 
     float total_kernel_time = 0.0f; // Variable to accumulate kernel execution times
 
-    MEASURE_KERNEL_TIME((read_sample_pixels<<<block_size_x, grid_size_x>>>(tex, total_npj, d_coordinates_flat, d_sample_pixels)), total_kernel_time);
+    // Read sample pixels
+    MEASURE_KERNEL_TIME((read_sample_pixels<<<block_size_x, grid_size_x>>>(d_image, w, h, total_npj, d_coordinates_flat, d_sample_pixels)), total_kernel_time);
 
     // Compute sums
     float *d_sums_r, *d_sums_g, *d_sums_b;
@@ -422,12 +410,11 @@ int main() {
     CSC(cudaMalloc(&d_inverse_covariance_matrices, nc * 9 * sizeof(float)));
     MEASURE_KERNEL_TIME((invert_covariances<<<block_size_x, grid_size_x>>>(nc, d_covariance_matrices, d_inverse_covariance_matrices)), total_kernel_time);
 
-    MEASURE_KERNEL_TIME((kernel<<<dim3(grid_size_x, grid_size_y), dim3(block_size_x, block_size_y)>>>(tex, dev_out, w, h, nc, d_avg_r, d_avg_g, d_avg_b, d_inverse_covariance_matrices)), total_kernel_time);
+    MEASURE_KERNEL_TIME((kernel<<<dim3(grid_size_x, grid_size_y), dim3(block_size_x, block_size_y)>>>(d_image, dev_out, w, h, nc, d_avg_r, d_avg_g, d_avg_b, d_inverse_covariance_matrices)), total_kernel_time);
 
     CSC(cudaMemcpy(data, dev_out, sizeof(uchar4) * w * h, cudaMemcpyDeviceToHost));
 
-    CSC(cudaDestroyTextureObject(tex));
-    CSC(cudaFreeArray(arr));
+    CSC(cudaFree(d_image));
     CSC(cudaFree(dev_out));
 
     printf("CUDA execution time: <%f ms>\n", total_kernel_time);
