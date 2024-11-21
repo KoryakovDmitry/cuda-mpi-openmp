@@ -292,7 +292,7 @@ int main() {
     // set grid_size_y
     scanf("%d", &grid_size_y);
 
-    char inputFilepath[1024], outputFilepath[1024];
+    char inputFilepath[4095], outputFilepath[4095];
 
     // Reading input and output file paths with buffer size limits
     if (scanf("%4095s", inputFilepath) != 1) {
