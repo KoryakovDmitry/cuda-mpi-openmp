@@ -33,24 +33,48 @@
 
 #define MAX_CLASSES 32
 
+__device__ double atomicAddDouble(double* address, double val)
+{
+    unsigned long long int* address_as_ull =
+                              (unsigned long long int*)address;
+    unsigned long long int old = *address_as_ull, assumed;
+
+    do {
+        assumed = old;
+        old = atomicCAS(address_as_ull, assumed,
+                        __double_as_longlong(val +
+                               __longlong_as_double(assumed)));
+
+    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
+    } while (assumed != old);
+
+    return __longlong_as_double(old);
+}
+
+// Constants for blocks, threads, and grids
+const int THREADS_PER_BLOCK_X = 32;
+const int THREADS_PER_BLOCK_Y = 32;
+const int BLOCKS_PER_GRID_X = 16;
+const int BLOCKS_PER_GRID_Y = 16;
+
 // Constant memory for averages and inverse covariance matrices
-__constant__ float const_avg_r[MAX_CLASSES];
-__constant__ float const_avg_g[MAX_CLASSES];
-__constant__ float const_avg_b[MAX_CLASSES];
-__constant__ float const_inv_covariance_matrices[MAX_CLASSES][3][3];
+__constant__ double const_avg_r[MAX_CLASSES];
+__constant__ double const_avg_g[MAX_CLASSES];
+__constant__ double const_avg_b[MAX_CLASSES];
+__constant__ double const_inv_covariance_matrices[MAX_CLASSES][3][3];
 
-// Device function to invert a 3x3 matrix (float precision)
-__device__ void invert_3x3_matrix_float(const float *a, float *inv_a) {
-    float det = a[0]*(a[4]*a[8] - a[5]*a[7]) - a[1]*(a[3]*a[8] - a[5]*a[6]) + a[2]*(a[3]*a[7] - a[4]*a[6]);
+// Device function to invert a 3x3 matrix (double precision)
+__device__ void invert_3x3_matrix_double(const double *a, double *inv_a) {
+    double det = a[0]*(a[4]*a[8] - a[5]*a[7]) - a[1]*(a[3]*a[8] - a[5]*a[6]) + a[2]*(a[3]*a[7] - a[4]*a[6]);
 
-    if (fabsf(det) < 1e-6f) {
+    if (fabs(det) < 1e-12) {
         // Matrix is singular, set inverse to zero matrix
         for (int i = 0; i < 9; i++)
-            inv_a[i] = 0.0f;
+            inv_a[i] = 0.0;
         return;
     }
 
-    float inv_det = 1.0f / det;
+    double inv_det = 1.0 / det;
 
     inv_a[0] = (a[4]*a[8] - a[5]*a[7]) * inv_det;
     inv_a[1] = (a[2]*a[7] - a[1]*a[8]) * inv_det;
@@ -66,7 +90,7 @@ __device__ void invert_3x3_matrix_float(const float *a, float *inv_a) {
 }
 
 // Kernel to read sample pixel values
-__global__ void read_sample_pixels(uchar4 *d_image, int w, int h, int total_npj, int *d_coordinates_flat, float3 *d_sample_pixels) {
+__global__ void read_sample_pixels(uchar4 *d_image, int w, int h, int total_npj, int *d_coordinates_flat, double3 *d_sample_pixels) {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (tid >= total_npj)
@@ -77,15 +101,15 @@ __global__ void read_sample_pixels(uchar4 *d_image, int w, int h, int total_npj,
 
     // Check if x and y are within image bounds
     if (x < 0 || x >= w || y < 0 || y >= h) {
-        d_sample_pixels[tid] = make_float3(0.0f, 0.0f, 0.0f);
+        d_sample_pixels[tid] = make_double3(0.0, 0.0, 0.0);
     } else {
         uchar4 p = d_image[y * w + x];
-        d_sample_pixels[tid] = make_float3((float)p.x, (float)p.y, (float)p.z);
+        d_sample_pixels[tid] = make_double3((double)p.x, (double)p.y, (double)p.z);
     }
 }
 
 // Kernel to compute sums for means
-__global__ void compute_sums(int total_npj, int *d_class_ids, float3 *d_sample_pixels, float *d_sums_r, float *d_sums_g, float *d_sums_b) {
+__global__ void compute_sums(int total_npj, int *d_class_ids, double3 *d_sample_pixels, double *d_sums_r, double *d_sums_g, double *d_sums_b) {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (tid >= total_npj)
@@ -93,15 +117,15 @@ __global__ void compute_sums(int total_npj, int *d_class_ids, float3 *d_sample_p
 
     int class_id = d_class_ids[tid];
 
-    float3 p = d_sample_pixels[tid];
+    double3 p = d_sample_pixels[tid];
 
-    atomicAdd(&d_sums_r[class_id], p.x);
-    atomicAdd(&d_sums_g[class_id], p.y);
-    atomicAdd(&d_sums_b[class_id], p.z);
+    atomicAddDouble(&d_sums_r[class_id], p.x);
+    atomicAddDouble(&d_sums_g[class_id], p.y);
+    atomicAddDouble(&d_sums_b[class_id], p.z);
 }
 
 // Kernel to compute averages
-__global__ void compute_averages(int nc, float *d_sums_r, float *d_sums_g, float *d_sums_b, int *d_npjs, float *d_avg_r, float *d_avg_g, float *d_avg_b) {
+__global__ void compute_averages(int nc, double *d_sums_r, double *d_sums_g, double *d_sums_b, int *d_npjs, double *d_avg_r, double *d_avg_g, double *d_avg_b) {
     int c = threadIdx.x + blockIdx.x * blockDim.x;
 
     if (c >= nc)
@@ -114,14 +138,14 @@ __global__ void compute_averages(int nc, float *d_sums_r, float *d_sums_g, float
         d_avg_g[c] = d_sums_g[c] / npj;
         d_avg_b[c] = d_sums_b[c] / npj;
     } else {
-        d_avg_r[c] = 0.0f;
-        d_avg_g[c] = 0.0f;
-        d_avg_b[c] = 0.0f;
+        d_avg_r[c] = 0.0;
+        d_avg_g[c] = 0.0;
+        d_avg_b[c] = 0.0;
     }
 }
 
 // Kernel to compute covariance matrices
-__global__ void compute_covariances(int total_npj, int *d_class_ids, float3 *d_sample_pixels, float *d_avg_r, float *d_avg_g, float *d_avg_b, float *d_covariance_matrices) {
+__global__ void compute_covariances(int total_npj, int *d_class_ids, double3 *d_sample_pixels, double *d_avg_r, double *d_avg_g, double *d_avg_b, double *d_covariance_matrices) {
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (tid >= total_npj)
@@ -129,14 +153,14 @@ __global__ void compute_covariances(int total_npj, int *d_class_ids, float3 *d_s
 
     int class_id = d_class_ids[tid];
 
-    float3 p = d_sample_pixels[tid];
+    double3 p = d_sample_pixels[tid];
 
-    float3 avg;
+    double3 avg;
     avg.x = d_avg_r[class_id];
     avg.y = d_avg_g[class_id];
     avg.z = d_avg_b[class_id];
 
-    float3 diff;
+    double3 diff;
     diff.x = p.x - avg.x;
     diff.y = p.y - avg.y;
     diff.z = p.z - avg.z;
@@ -146,18 +170,18 @@ __global__ void compute_covariances(int total_npj, int *d_class_ids, float3 *d_s
     // [3 4 5]
     // [6 7 8]
 
-    float *cov = &d_covariance_matrices[class_id * 9];
+    double *cov = &d_covariance_matrices[class_id * 9];
 
-    atomicAdd(&cov[0], diff.x * diff.x); // Cxx
-    atomicAdd(&cov[1], diff.x * diff.y); // Cxy
-    atomicAdd(&cov[2], diff.x * diff.z); // Cxz
-    atomicAdd(&cov[4], diff.y * diff.y); // Cyy
-    atomicAdd(&cov[5], diff.y * diff.z); // Cyz
-    atomicAdd(&cov[8], diff.z * diff.z); // Czz
+    atomicAddDouble(&cov[0], diff.x * diff.x); // Cxx
+    atomicAddDouble(&cov[1], diff.x * diff.y); // Cxy
+    atomicAddDouble(&cov[2], diff.x * diff.z); // Cxz
+    atomicAddDouble(&cov[4], diff.y * diff.y); // Cyy
+    atomicAddDouble(&cov[5], diff.y * diff.z); // Cyz
+    atomicAddDouble(&cov[8], diff.z * diff.z); // Czz
 }
 
 // Kernel to finalize covariance matrices
-__global__ void finalize_covariances(int nc, float *d_covariance_matrices, int *d_npjs) {
+__global__ void finalize_covariances(int nc, double *d_covariance_matrices, int *d_npjs) {
     int c = threadIdx.x + blockIdx.x * blockDim.x;
 
     if (c >= nc)
@@ -166,9 +190,9 @@ __global__ void finalize_covariances(int nc, float *d_covariance_matrices, int *
     int npj = d_npjs[c];
 
     if (npj > 1) {
-        float inv_np1 = 1.0f / (npj - 1);
+        double inv_np1 = 1.0 / (npj - 1);
 
-        float *cov = &d_covariance_matrices[c * 9];
+        double *cov = &d_covariance_matrices[c * 9];
 
         // Finalize covariance matrix
         cov[0] *= inv_np1; // Cxx
@@ -184,25 +208,25 @@ __global__ void finalize_covariances(int nc, float *d_covariance_matrices, int *
         cov[7] = cov[5]; // Czy = Cyz
     } else {
         // If npj <= 1, set covariance matrix to identity
-        float *cov = &d_covariance_matrices[c * 9];
+        double *cov = &d_covariance_matrices[c * 9];
 
         for (int i = 0; i < 9; i++) {
-            cov[i] = 0.0f;
+            cov[i] = 0.0;
         }
     }
 }
 
 // Kernel to invert covariance matrices
-__global__ void invert_covariances(int nc, float *d_covariance_matrices, float *d_inverse_covariance_matrices) {
+__global__ void invert_covariances(int nc, double *d_covariance_matrices, double *d_inverse_covariance_matrices) {
     int c = threadIdx.x + blockIdx.x * blockDim.x;
 
     if (c >= nc)
         return;
 
-    float *cov = &d_covariance_matrices[c * 9];
-    float *inv_cov = &d_inverse_covariance_matrices[c * 9];
+    double *cov = &d_covariance_matrices[c * 9];
+    double *inv_cov = &d_inverse_covariance_matrices[c * 9];
 
-    invert_3x3_matrix_float(cov, inv_cov);
+    invert_3x3_matrix_double(cov, inv_cov);
 }
 
 // Main kernel to compute Mahalanobis distances and assign class labels
@@ -215,33 +239,33 @@ __global__ void classify_kernel(uchar4 *d_image, int w, int h, int nc) {
     for (int y = idy; y < h; y += offsety) {
         for (int x = idx; x < w; x += offsetx) {
             uchar4 p_uchar = d_image[y * w + x];
-            float3 p;
-            p.x = (float)p_uchar.x;
-            p.y = (float)p_uchar.y;
-            p.z = (float)p_uchar.z;
+            double3 p;
+            p.x = (double)p_uchar.x;
+            p.y = (double)p_uchar.y;
+            p.z = (double)p_uchar.z;
 
-            float min_m = FLT_MAX;
+            double min_m = DBL_MAX;
             int label_class_idx_int = -1;
 
             for (int c = 0; c < nc; c++) {
-                float3 avg_j;
+                double3 avg_j;
                 avg_j.x = const_avg_r[c];
                 avg_j.y = const_avg_g[c];
                 avg_j.z = const_avg_b[c];
 
-                float3 diff;
+                double3 diff;
                 diff.x = p.x - avg_j.x;
                 diff.y = p.y - avg_j.y;
                 diff.z = p.z - avg_j.z;
 
-                const float (*inv_cov)[3] = const_inv_covariance_matrices[c];
+                const double (*inv_cov)[3] = const_inv_covariance_matrices[c];
 
-                float3 temp;
+                double3 temp;
                 temp.x = inv_cov[0][0] * diff.x + inv_cov[0][1] * diff.y + inv_cov[0][2] * diff.z;
                 temp.y = inv_cov[1][0] * diff.x + inv_cov[1][1] * diff.y + inv_cov[1][2] * diff.z;
                 temp.z = inv_cov[2][0] * diff.x + inv_cov[2][1] * diff.y + inv_cov[2][2] * diff.z;
 
-                float m = diff.x * temp.x + diff.y * temp.y + diff.z * temp.z;
+                double m = diff.x * temp.x + diff.y * temp.y + diff.z * temp.z;
 
                 if (m < min_m) {
                     min_m = m;
@@ -375,8 +399,8 @@ int main() {
     CSC(cudaMalloc(&d_coordinates_flat, total_npj * 2 * sizeof(int)));
     CSC(cudaMemcpy(d_coordinates_flat, coordinates_flat, total_npj * 2 * sizeof(int), cudaMemcpyHostToDevice));
 
-    float3 *d_sample_pixels;
-    CSC(cudaMalloc(&d_sample_pixels, total_npj * sizeof(float3)));
+    double3 *d_sample_pixels;
+    CSC(cudaMalloc(&d_sample_pixels, total_npj * sizeof(double3)));
 
     float total_kernel_time = 0.0f; // Variable to accumulate kernel execution times
 
@@ -384,44 +408,44 @@ int main() {
     MEASURE_KERNEL_TIME((read_sample_pixels<<<block_size_x, grid_size_x>>>(d_image, w, h, total_npj, d_coordinates_flat, d_sample_pixels)), total_kernel_time);
 
     // Compute sums
-    float *d_sums_r, *d_sums_g, *d_sums_b;
-    CSC(cudaMalloc(&d_sums_r, nc * sizeof(float)));
-    CSC(cudaMalloc(&d_sums_g, nc * sizeof(float)));
-    CSC(cudaMalloc(&d_sums_b, nc * sizeof(float)));
-    CSC(cudaMemset(d_sums_r, 0, nc * sizeof(float)));
-    CSC(cudaMemset(d_sums_g, 0, nc * sizeof(float)));
-    CSC(cudaMemset(d_sums_b, 0, nc * sizeof(float)));
+    double *d_sums_r, *d_sums_g, *d_sums_b;
+    CSC(cudaMalloc(&d_sums_r, nc * sizeof(double)));
+    CSC(cudaMalloc(&d_sums_g, nc * sizeof(double)));
+    CSC(cudaMalloc(&d_sums_b, nc * sizeof(double)));
+    CSC(cudaMemset(d_sums_r, 0, nc * sizeof(double)));
+    CSC(cudaMemset(d_sums_g, 0, nc * sizeof(double)));
+    CSC(cudaMemset(d_sums_b, 0, nc * sizeof(double)));
 
     MEASURE_KERNEL_TIME((compute_sums<<<block_size_x, grid_size_x>>>(total_npj, d_class_ids, d_sample_pixels, d_sums_r, d_sums_g, d_sums_b)), total_kernel_time);
 
     // Compute averages
-    float *d_avg_r, *d_avg_g, *d_avg_b;
-    CSC(cudaMalloc(&d_avg_r, nc * sizeof(float)));
-    CSC(cudaMalloc(&d_avg_g, nc * sizeof(float)));
-    CSC(cudaMalloc(&d_avg_b, nc * sizeof(float)));
+    double *d_avg_r, *d_avg_g, *d_avg_b;
+    CSC(cudaMalloc(&d_avg_r, nc * sizeof(double)));
+    CSC(cudaMalloc(&d_avg_g, nc * sizeof(double)));
+    CSC(cudaMalloc(&d_avg_b, nc * sizeof(double)));
 
     MEASURE_KERNEL_TIME((compute_averages<<<block_size_x, grid_size_x>>>(nc, d_sums_r, d_sums_g, d_sums_b, d_npjs, d_avg_r, d_avg_g, d_avg_b)), total_kernel_time);
 
     // Copy averages to host and then to constant memory
-    float *h_avg_r = (float *)malloc(nc * sizeof(float));
-    float *h_avg_g = (float *)malloc(nc * sizeof(float));
-    float *h_avg_b = (float *)malloc(nc * sizeof(float));
-    CSC(cudaMemcpy(h_avg_r, d_avg_r, nc * sizeof(float), cudaMemcpyDeviceToHost));
-    CSC(cudaMemcpy(h_avg_g, d_avg_g, nc * sizeof(float), cudaMemcpyDeviceToHost));
-    CSC(cudaMemcpy(h_avg_b, d_avg_b, nc * sizeof(float), cudaMemcpyDeviceToHost));
+    double *h_avg_r = (double *)malloc(nc * sizeof(double));
+    double *h_avg_g = (double *)malloc(nc * sizeof(double));
+    double *h_avg_b = (double *)malloc(nc * sizeof(double));
+    CSC(cudaMemcpy(h_avg_r, d_avg_r, nc * sizeof(double), cudaMemcpyDeviceToHost));
+    CSC(cudaMemcpy(h_avg_g, d_avg_g, nc * sizeof(double), cudaMemcpyDeviceToHost));
+    CSC(cudaMemcpy(h_avg_b, d_avg_b, nc * sizeof(double), cudaMemcpyDeviceToHost));
 
-    CSC(cudaMemcpyToSymbol(const_avg_r, h_avg_r, nc * sizeof(float)));
-    CSC(cudaMemcpyToSymbol(const_avg_g, h_avg_g, nc * sizeof(float)));
-    CSC(cudaMemcpyToSymbol(const_avg_b, h_avg_b, nc * sizeof(float)));
+    CSC(cudaMemcpyToSymbol(const_avg_r, h_avg_r, nc * sizeof(double)));
+    CSC(cudaMemcpyToSymbol(const_avg_g, h_avg_g, nc * sizeof(double)));
+    CSC(cudaMemcpyToSymbol(const_avg_b, h_avg_b, nc * sizeof(double)));
 
     free(h_avg_r);
     free(h_avg_g);
     free(h_avg_b);
 
     // Compute covariance matrices
-    float *d_covariance_matrices;
-    CSC(cudaMalloc(&d_covariance_matrices, nc * 9 * sizeof(float)));
-    CSC(cudaMemset(d_covariance_matrices, 0, nc * 9 * sizeof(float)));
+    double *d_covariance_matrices;
+    CSC(cudaMalloc(&d_covariance_matrices, nc * 9 * sizeof(double)));
+    CSC(cudaMemset(d_covariance_matrices, 0, nc * 9 * sizeof(double)));
 
     MEASURE_KERNEL_TIME((compute_covariances<<<block_size_x, grid_size_x>>>(total_npj, d_class_ids, d_sample_pixels, d_avg_r, d_avg_g, d_avg_b, d_covariance_matrices)), total_kernel_time);
 
@@ -429,17 +453,18 @@ int main() {
     MEASURE_KERNEL_TIME((finalize_covariances<<<block_size_x, grid_size_x>>>(nc, d_covariance_matrices, d_npjs)), total_kernel_time);
 
     // Invert covariance matrices
-    float *d_inverse_covariance_matrices;
-    CSC(cudaMalloc(&d_inverse_covariance_matrices, nc * 9 * sizeof(float)));
+    double *d_inverse_covariance_matrices;
+    CSC(cudaMalloc(&d_inverse_covariance_matrices, nc * 9 * sizeof(double)));
+
     MEASURE_KERNEL_TIME((invert_covariances<<<block_size_x, grid_size_x>>>(nc, d_covariance_matrices, d_inverse_covariance_matrices)), total_kernel_time);
 
     // Copy inverse covariance matrices to host and then to constant memory
-    float *h_inverse_covariance_matrices = (float *)malloc(nc * 9 * sizeof(float));
-    CSC(cudaMemcpy(h_inverse_covariance_matrices, d_inverse_covariance_matrices, nc * 9 * sizeof(float), cudaMemcpyDeviceToHost));
+    double *h_inverse_covariance_matrices = (double *)malloc(nc * 9 * sizeof(double));
+    CSC(cudaMemcpy(h_inverse_covariance_matrices, d_inverse_covariance_matrices, nc * 9 * sizeof(double), cudaMemcpyDeviceToHost));
 
-    float h_inv_cov_matrices[MAX_CLASSES][3][3];
+    double h_inv_cov_matrices[MAX_CLASSES][3][3];
     for (int c = 0; c < nc; c++) {
-        float *src = &h_inverse_covariance_matrices[c * 9];
+        double *src = &h_inverse_covariance_matrices[c * 9];
         h_inv_cov_matrices[c][0][0] = src[0];
         h_inv_cov_matrices[c][0][1] = src[1];
         h_inv_cov_matrices[c][0][2] = src[2];
@@ -450,7 +475,7 @@ int main() {
         h_inv_cov_matrices[c][2][1] = src[7];
         h_inv_cov_matrices[c][2][2] = src[8];
     }
-    CSC(cudaMemcpyToSymbol(const_inv_covariance_matrices, h_inv_cov_matrices, sizeof(float) * nc * 3 * 3));
+    CSC(cudaMemcpyToSymbol(const_inv_covariance_matrices, h_inv_cov_matrices, sizeof(double) * nc * 3 * 3));
 
     free(h_inverse_covariance_matrices);
 
