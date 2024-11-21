@@ -103,18 +103,19 @@ class Lab3Processor(BaseLabProcessor):
             data_input_item = ImgData(path2data=path2data, idx=ii)
             (w, h) = data_input_item.png.size[0:2]
 
-            if os.path.basename(path2data) in MAP_TO_INIT_POINTS:
-                definition_classes = MAP_TO_INIT_POINTS[os.path.basename(path2data)]
-            else:
-                if count_classes is None:
-                    count_classes = random.randint(1, MAX_CLASSES + 1)
-
-                definition_classes = [
-                    GroundTruthClass(
-                        lbl=lbl, definition_points=get_random_pts(w=w, h=h, count_pts=count_pts)
-                    )
-                    for lbl in range(0, count_classes + 1)
-                ]
+            # if os.path.basename(path2data) in MAP_TO_INIT_POINTS:
+            #     definition_classes = MAP_TO_INIT_POINTS[os.path.basename(path2data)]
+            # else:
+            #     if count_classes is None:
+            #         count_classes = random.randint(1, MAX_CLASSES + 1)
+            #
+            #     definition_classes = [
+            #         GroundTruthClass(
+            #             lbl=lbl, definition_points=get_random_pts(w=w, h=h, count_pts=count_pts)
+            #         )
+            #         for lbl in range(0, count_classes + 1)
+            #     ]
+            definition_classes = MAP_TO_INIT_POINTS["test_01_lab3.txt"]
 
             if not (
                     (len(definition_classes) <= MAX_CLASSES)
