@@ -172,12 +172,12 @@ __global__ void compute_covariances(int total_npj, int *d_class_ids, double3 *d_
 
     double *cov = &d_covariance_matrices[class_id * 9];
 
-    atomicAdd(&cov[0], diff.x * diff.x); // Cxx
-    atomicAdd(&cov[1], diff.x * diff.y); // Cxy
-    atomicAdd(&cov[2], diff.x * diff.z); // Cxz
-    atomicAdd(&cov[4], diff.y * diff.y); // Cyy
-    atomicAdd(&cov[5], diff.y * diff.z); // Cyz
-    atomicAdd(&cov[8], diff.z * diff.z); // Czz
+    atomicAddDouble(&cov[0], diff.x * diff.x); // Cxx
+    atomicAddDouble(&cov[1], diff.x * diff.y); // Cxy
+    atomicAddDouble(&cov[2], diff.x * diff.z); // Cxz
+    atomicAddDouble(&cov[4], diff.y * diff.y); // Cyy
+    atomicAddDouble(&cov[5], diff.y * diff.z); // Cyz
+    atomicAddDouble(&cov[8], diff.z * diff.z); // Czz
 }
 
 // Kernel to finalize covariance matrices
