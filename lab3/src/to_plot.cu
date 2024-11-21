@@ -171,6 +171,6 @@ int main() {
     fclose(fout);
 
     free(h_image);
-    printf("CUDA execution time: %f ms\n", total_time);
+    printf("CUDA execution time: <%f ms>\n", total_time);
     return 0;
 }
