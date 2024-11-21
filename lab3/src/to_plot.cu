@@ -2,15 +2,16 @@
 #include <stdlib.h>
 #include <cuda_runtime.h>
 #include <math.h>
+#include <float.h>
 
-#define CSC(call) \
-    do { \
-        cudaError_t status = call; \
-        if (status != cudaSuccess) { \
+#define CSC(call)                                               \
+    do {                                                        \
+        cudaError_t status = call;                              \
+        if (status != cudaSuccess) {                            \
             fprintf(stderr, "[ERROR CUDA] File: '%s'; Line: %i; Message: %s.\n", \
-                    __FILE__, __LINE__, cudaGetErrorString(status)); \
-            exit(1); \
-        } \
+                    __FILE__, __LINE__, cudaGetErrorString(status));   \
+            exit(1);                                            \
+        }                                                       \
     } while (0)
 
 #define MEASURE_KERNEL_TIME(kernel_call, time_var)              \
