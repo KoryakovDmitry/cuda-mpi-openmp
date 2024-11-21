@@ -172,7 +172,7 @@ int main() {
 
     // Launch classification kernel
     float total_kernel_time = 0.0f;
-    MEASURE_KERNEL_TIME(classify_kernel<<<block_size, thread_size>>>(d_image, w, h, nc));
+    MEASURE_KERNEL_TIME((classify_kernel<<<block_size, thread_size>>>(d_image, w, h, nc)), total_kernel_time);
     CSC(cudaDeviceSynchronize());
 
     // Copy results back to host and write output
