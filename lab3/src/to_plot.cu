@@ -3,6 +3,7 @@
 #include <cuda_runtime.h>
 #include <math.h>
 #include <float.h>
+#include <string.h> // Added for memset
 
 #define CSC(call)                                               \
     do {                                                        \
@@ -51,7 +52,6 @@ __device__ double atomicAddDouble(double* address, double val)
     return __longlong_as_double(old);
 }
 
-
 // Constant memory for averages and inverse covariance matrices
 __constant__ double const_avg_r[MAX_CLASSES];
 __constant__ double const_avg_g[MAX_CLASSES];
@@ -63,9 +63,10 @@ __device__ void invert_3x3_matrix_double(const double *a, double *inv_a) {
     double det = a[0]*(a[4]*a[8] - a[5]*a[7]) - a[1]*(a[3]*a[8] - a[5]*a[6]) + a[2]*(a[3]*a[7] - a[4]*a[6]);
 
     if (fabs(det) < 1e-12) {
-        // Matrix is singular, set inverse to zero matrix
-        for (int i = 0; i < 9; i++)
-            inv_a[i] = 0.0;
+        // Matrix is singular, set inverse to identity matrix
+        inv_a[0] = 1.0; inv_a[1] = 0.0; inv_a[2] = 0.0;
+        inv_a[3] = 0.0; inv_a[4] = 1.0; inv_a[5] = 0.0;
+        inv_a[6] = 0.0; inv_a[7] = 0.0; inv_a[8] = 1.0;
         return;
     }
 
@@ -204,10 +205,9 @@ __global__ void finalize_covariances(int nc, double *d_covariance_matrices, int 
     } else {
         // If npj <= 1, set covariance matrix to identity
         double *cov = &d_covariance_matrices[c * 9];
-
-        for (int i = 0; i < 9; i++) {
-            cov[i] = 0.0;
-        }
+        cov[0] = 1.0; cov[1] = 0.0; cov[2] = 0.0;
+        cov[3] = 0.0; cov[4] = 1.0; cov[5] = 0.0;
+        cov[6] = 0.0; cov[7] = 0.0; cov[8] = 1.0;
     }
 }
 
@@ -271,7 +271,7 @@ __global__ void classify_kernel(uchar4 *d_image, int w, int h, int nc) {
             }
 
             // Convert to unsigned char
-            unsigned char label_class = static_cast<unsigned char>(label_class_idx_int);
+            unsigned char label_class = (unsigned char)(label_class_idx_int); // Changed from static_cast to C-style cast
 
             // Set the output pixel alpha channel to the class label
             d_image[y * w + x].w = label_class;
@@ -296,33 +296,84 @@ int main() {
     scanf("%1024s", inputFilepath);
     scanf("%1024s", outputFilepath);
 
+    // Reading input and output file paths with buffer size limits
+    if (scanf("%4095s", inputFilepath) != 1) {
+        fprintf(stderr, "Error reading input filepath.\n");
+        return 1;
+    }
+    if (scanf("%4095s", outputFilepath) != 1) {
+        fprintf(stderr, "Error reading output filepath.\n");
+        return 1;
+    }
+
     // Reading the number of classes
-    scanf("%d", &nc);
+    if (scanf("%d", &nc) != 1) {
+        fprintf(stderr, "Error reading number of classes.\n");
+        return 1;
+    }
+
+    // Enforce maximum number of classes
+    if (nc > MAX_CLASSES) {
+        fprintf(stderr, "Number of classes (%d) exceeds MAX_CLASSES (%d).\n", nc, MAX_CLASSES);
+        return 1;
+    }
+    if (nc <= 0) {
+        fprintf(stderr, "Number of classes must be positive.\n");
+        return 1;
+    }
 
     // Memory allocation for the number of pixels in each class
     int *npjs = (int *)malloc(nc * sizeof(int));
     if (npjs == NULL) {
-        fprintf(stderr, "Memory allocation error!\n");
+        fprintf(stderr, "Memory allocation error for npjs!\n");
         return 1;
     }
 
     // Arrays to store the coordinates of pixels (2D dynamic array)
     int **coordinates = (int **)malloc(nc * sizeof(int *));
     if (coordinates == NULL) {
-        fprintf(stderr, "Memory allocation error!\n");
+        fprintf(stderr, "Memory allocation error for coordinates!\n");
         free(npjs);
         return 1;
+    }
+
+    // Initialize coordinates to NULL for safe freeing in case of errors
+    for (int c = 0; c < nc; c++) {
+        coordinates[c] = NULL;
     }
 
     // Reading data for each class
     for (int c = 0; c < nc; c++) {
         // Reading the number of pixels
-        scanf("%d", &npjs[c]);
+        if (scanf("%d", &npjs[c]) != 1) {
+            fprintf(stderr, "Error reading number of pixels for class %d.\n", c);
+            // Free allocated memory before exiting
+            for (int i = 0; i < nc; i++) {
+                if (coordinates[i] != NULL)
+                    free(coordinates[i]);
+            }
+            free(coordinates);
+            free(npjs);
+            return 1;
+        }
+
+        if (npjs[c] < 0) {
+            fprintf(stderr, "Number of pixels for class %d cannot be negative.\n", c);
+            // Free allocated memory before exiting
+            for (int i = 0; i < nc; i++) {
+                if (coordinates[i] != NULL)
+                    free(coordinates[i]);
+            }
+            free(coordinates);
+            free(npjs);
+            return 1;
+        }
 
         // Allocating memory to store coordinates (npjs[c] pairs of numbers)
         coordinates[c] = (int *)malloc(npjs[c] * 2 * sizeof(int));
         if (coordinates[c] == NULL) {
-            fprintf(stderr, "Memory allocation error!\n");
+            fprintf(stderr, "Memory allocation error for class %d coordinates!\n", c);
+            // Free previously allocated memory
             for (int i = 0; i < c; i++) {
                 free(coordinates[i]);
             }
@@ -333,15 +384,84 @@ int main() {
 
         // Reading the coordinates of pixels
         for (int p = 0; p < npjs[c]; p++) {
-            scanf("%d %d", &coordinates[c][p * 2], &coordinates[c][p * 2 + 1]);
+            if (scanf("%d %d", &coordinates[c][p * 2], &coordinates[c][p * 2 + 1]) != 2) {
+                fprintf(stderr, "Error reading coordinates for class %d, pixel %d.\n", c, p);
+                // Free allocated memory before exiting
+                for (int i = 0; i <= c; i++) {
+                    free(coordinates[i]);
+                }
+                free(coordinates);
+                free(npjs);
+                return 1;
+            }
         }
     }
 
+    // Open input file
     FILE *fp = fopen(inputFilepath, "rb");
-    fread(&w, sizeof(int), 1, fp);
-    fread(&h, sizeof(int), 1, fp);
+    if (fp == NULL) {
+        fprintf(stderr, "Error opening input file: %s\n", inputFilepath);
+        // Free allocated memory before exiting
+        for (int c = 0; c < nc; c++) {
+            free(coordinates[c]);
+        }
+        free(coordinates);
+        free(npjs);
+        return 1;
+    }
+
+    // Read image dimensions
+    if (fread(&w, sizeof(int), 1, fp) != 1) {
+        fprintf(stderr, "Error reading image width from input file.\n");
+        fclose(fp);
+        // Free allocated memory before exiting
+        for (int c = 0; c < nc; c++) {
+            free(coordinates[c]);
+        }
+        free(coordinates);
+        free(npjs);
+        return 1;
+    }
+    if (fread(&h, sizeof(int), 1, fp) != 1) {
+        fprintf(stderr, "Error reading image height from input file.\n");
+        fclose(fp);
+        // Free allocated memory before exiting
+        for (int c = 0; c < nc; c++) {
+            free(coordinates[c]);
+        }
+        free(coordinates);
+        free(npjs);
+        return 1;
+    }
+
+    // Allocate host memory for image data
     uchar4 *data = (uchar4 *)malloc(sizeof(uchar4) * w * h);
-    fread(data, sizeof(uchar4), w * h, fp);
+    if (data == NULL) {
+        fprintf(stderr, "Memory allocation error for image data!\n");
+        fclose(fp);
+        // Free allocated memory before exiting
+        for (int c = 0; c < nc; c++) {
+            free(coordinates[c]);
+        }
+        free(coordinates);
+        free(npjs);
+        return 1;
+    }
+
+    // Read image data
+    size_t items_read = fread(data, sizeof(uchar4), w * h, fp);
+    if (items_read != (size_t)(w * h)) {
+        fprintf(stderr, "Error reading image data from input file.\n");
+        fclose(fp);
+        free(data);
+        // Free allocated memory before exiting
+        for (int c = 0; c < nc; c++) {
+            free(coordinates[c]);
+        }
+        free(coordinates);
+        free(npjs);
+        return 1;
+    }
     fclose(fp);
 
     // Allocate device memory for image data
@@ -352,14 +472,57 @@ int main() {
     // Prepare data for processing
     int total_npj = 0;
     int *offsets = (int *)malloc((nc + 1) * sizeof(int)); // offsets[0..nc]
+    if (offsets == NULL) {
+        fprintf(stderr, "Memory allocation error for offsets!\n");
+        // Free allocated memory before exiting
+        free(data);
+        for (int c = 0; c < nc; c++) {
+            free(coordinates[c]);
+        }
+        free(coordinates);
+        free(npjs);
+        cudaFree(d_image);
+        return 1;
+    }
     offsets[0] = 0;
     for (int c = 0; c < nc; c++) {
+        // Validate coordinates are within image bounds
+        for (int p = 0; p < npjs[c]; p++) {
+            int x = coordinates[c][p * 2];
+            int y = coordinates[c][p * 2 + 1];
+            if (x < 0 || x >= w || y < 0 || y >= h) {
+                fprintf(stderr, "Invalid coordinates (%d, %d) for class %d, pixel %d.\n", x, y, c, p);
+                // Free allocated memory before exiting
+                free(offsets);
+                free(data);
+                for (int i = 0; i < nc; i++) {
+                    free(coordinates[i]);
+                }
+                free(coordinates);
+                free(npjs);
+                cudaFree(d_image);
+                return 1;
+            }
+        }
         offsets[c + 1] = offsets[c] + npjs[c];
     }
     total_npj = offsets[nc]; // total number of sample pixels
 
     // Flatten coordinates
     int *coordinates_flat = (int *)malloc(total_npj * 2 * sizeof(int));
+    if (coordinates_flat == NULL) {
+        fprintf(stderr, "Memory allocation error for flattened coordinates!\n");
+        // Free allocated memory before exiting
+        free(offsets);
+        free(data);
+        for (int c = 0; c < nc; c++) {
+            free(coordinates[c]);
+        }
+        free(coordinates);
+        free(npjs);
+        cudaFree(d_image);
+        return 1;
+    }
     int idx = 0;
     for (int c = 0; c < nc; c++) {
         for (int p = 0; p < npjs[c]; p++) {
@@ -373,6 +536,16 @@ int main() {
 
     // Prepare class IDs
     int *class_ids = (int *)malloc(total_npj * sizeof(int));
+    if (class_ids == NULL) {
+        fprintf(stderr, "Memory allocation error for class_ids!\n");
+        // Free allocated memory before exiting
+        free(coordinates_flat);
+        free(offsets);
+        free(data);
+        free(npjs);
+        cudaFree(d_image);
+        return 1;
+    }
     idx = 0;
     for (int c = 0; c < nc; c++) {
         for (int p = 0; p < npjs[c]; p++) {
@@ -407,7 +580,7 @@ int main() {
     CSC(cudaMalloc(&d_sums_r, nc * sizeof(double)));
     CSC(cudaMalloc(&d_sums_g, nc * sizeof(double)));
     CSC(cudaMalloc(&d_sums_b, nc * sizeof(double)));
-    CSC(cudaMemset(d_sums_r, 0, nc * sizeof(double)));
+    CSC(cudaMemset(d_sums_r, 0, nc * sizeof(double))); // Correct initialization
     CSC(cudaMemset(d_sums_g, 0, nc * sizeof(double)));
     CSC(cudaMemset(d_sums_b, 0, nc * sizeof(double)));
 
@@ -425,6 +598,20 @@ int main() {
     double *h_avg_r = (double *)malloc(nc * sizeof(double));
     double *h_avg_g = (double *)malloc(nc * sizeof(double));
     double *h_avg_b = (double *)malloc(nc * sizeof(double));
+    if (h_avg_r == NULL || h_avg_g == NULL || h_avg_b == NULL) {
+        fprintf(stderr, "Memory allocation error for host averages!\n");
+        // Free allocated memory before exiting
+        free(class_ids);
+        free(coordinates_flat);
+        free(offsets);
+        free(data);
+        free(h_avg_r); free(h_avg_g); free(h_avg_b);
+        cudaFree(d_image); cudaFree(d_npjs); cudaFree(d_class_ids);
+        cudaFree(d_coordinates_flat); cudaFree(d_sample_pixels);
+        cudaFree(d_sums_r); cudaFree(d_sums_g); cudaFree(d_sums_b);
+        cudaFree(d_avg_r); cudaFree(d_avg_g); cudaFree(d_avg_b);
+        return 1;
+    }
     CSC(cudaMemcpy(h_avg_r, d_avg_r, nc * sizeof(double), cudaMemcpyDeviceToHost));
     CSC(cudaMemcpy(h_avg_g, d_avg_g, nc * sizeof(double), cudaMemcpyDeviceToHost));
     CSC(cudaMemcpy(h_avg_b, d_avg_b, nc * sizeof(double), cudaMemcpyDeviceToHost));
@@ -440,7 +627,7 @@ int main() {
     // Compute covariance matrices
     double *d_covariance_matrices;
     CSC(cudaMalloc(&d_covariance_matrices, nc * 9 * sizeof(double)));
-    CSC(cudaMemset(d_covariance_matrices, 0, nc * 9 * sizeof(double)));
+    CSC(cudaMemset(d_covariance_matrices, 0, nc * 9 * sizeof(double))); // Correct initialization
 
     MEASURE_KERNEL_TIME((compute_covariances<<<block_size_x, grid_size_x>>>(total_npj, d_class_ids, d_sample_pixels, d_avg_r, d_avg_g, d_avg_b, d_covariance_matrices)), total_kernel_time);
 
@@ -455,9 +642,24 @@ int main() {
 
     // Copy inverse covariance matrices to host and then to constant memory
     double *h_inverse_covariance_matrices = (double *)malloc(nc * 9 * sizeof(double));
+    if (h_inverse_covariance_matrices == NULL) {
+        fprintf(stderr, "Memory allocation error for host inverse covariance matrices!\n");
+        // Free allocated memory before exiting
+        free(class_ids);
+        free(coordinates_flat);
+        free(offsets);
+        free(data);
+        cudaFree(d_image); cudaFree(d_npjs); cudaFree(d_class_ids);
+        cudaFree(d_coordinates_flat); cudaFree(d_sample_pixels);
+        cudaFree(d_sums_r); cudaFree(d_sums_g); cudaFree(d_sums_b);
+        cudaFree(d_avg_r); cudaFree(d_avg_g); cudaFree(d_avg_b);
+        cudaFree(d_covariance_matrices); cudaFree(d_inverse_covariance_matrices);
+        return 1;
+    }
     CSC(cudaMemcpy(h_inverse_covariance_matrices, d_inverse_covariance_matrices, nc * 9 * sizeof(double), cudaMemcpyDeviceToHost));
 
     double h_inv_cov_matrices[MAX_CLASSES][3][3];
+    memset(h_inv_cov_matrices, 0, sizeof(h_inv_cov_matrices)); // Initialize to zero
     for (int c = 0; c < nc; c++) {
         double *src = &h_inverse_covariance_matrices[c * 9];
         h_inv_cov_matrices[c][0][0] = src[0];
@@ -482,12 +684,76 @@ int main() {
 
     CSC(cudaFree(d_image));
 
-    printf("CUDA execution time: <%f ms>\n", total_kernel_time);
-
+    // Open output file
     fp = fopen(outputFilepath, "wb");
-    fwrite(&w, sizeof(int), 1, fp);
-    fwrite(&h, sizeof(int), 1, fp);
-    fwrite(data, sizeof(uchar4), w * h, fp);
+    if (fp == NULL) {
+        fprintf(stderr, "Error opening output file: %s\n", outputFilepath);
+        // Free allocated memory before exiting
+        free(data);
+        free(class_ids);
+        free(coordinates_flat);
+        free(offsets);
+        free(npjs);
+        cudaFree(d_npjs); cudaFree(d_class_ids);
+        cudaFree(d_coordinates_flat); cudaFree(d_sample_pixels);
+        cudaFree(d_sums_r); cudaFree(d_sums_g); cudaFree(d_sums_b);
+        cudaFree(d_avg_r); cudaFree(d_avg_g); cudaFree(d_avg_b);
+        cudaFree(d_covariance_matrices); cudaFree(d_inverse_covariance_matrices);
+        return 1;
+    }
+
+    // Write image dimensions
+    if (fwrite(&w, sizeof(int), 1, fp) != 1) {
+        fprintf(stderr, "Error writing image width to output file.\n");
+        fclose(fp);
+        // Free allocated memory before exiting
+        free(data);
+        free(class_ids);
+        free(coordinates_flat);
+        free(offsets);
+        free(npjs);
+        cudaFree(d_npjs); cudaFree(d_class_ids);
+        cudaFree(d_coordinates_flat); cudaFree(d_sample_pixels);
+        cudaFree(d_sums_r); cudaFree(d_sums_g); cudaFree(d_sums_b);
+        cudaFree(d_avg_r); cudaFree(d_avg_g); cudaFree(d_avg_b);
+        cudaFree(d_covariance_matrices); cudaFree(d_inverse_covariance_matrices);
+        return 1;
+    }
+    if (fwrite(&h, sizeof(int), 1, fp) != 1) {
+        fprintf(stderr, "Error writing image height to output file.\n");
+        fclose(fp);
+        // Free allocated memory before exiting
+        free(data);
+        free(class_ids);
+        free(coordinates_flat);
+        free(offsets);
+        free(npjs);
+        cudaFree(d_npjs); cudaFree(d_class_ids);
+        cudaFree(d_coordinates_flat); cudaFree(d_sample_pixels);
+        cudaFree(d_sums_r); cudaFree(d_sums_g); cudaFree(d_sums_b);
+        cudaFree(d_avg_r); cudaFree(d_avg_g); cudaFree(d_avg_b);
+        cudaFree(d_covariance_matrices); cudaFree(d_inverse_covariance_matrices);
+        return 1;
+    }
+
+    // Write image data
+    size_t items_written = fwrite(data, sizeof(uchar4), w * h, fp);
+    if (items_written != (size_t)(w * h)) {
+        fprintf(stderr, "Error writing image data to output file.\n");
+        fclose(fp);
+        // Free allocated memory before exiting
+        free(data);
+        free(class_ids);
+        free(coordinates_flat);
+        free(offsets);
+        free(npjs);
+        cudaFree(d_npjs); cudaFree(d_class_ids);
+        cudaFree(d_coordinates_flat); cudaFree(d_sample_pixels);
+        cudaFree(d_sums_r); cudaFree(d_sums_g); cudaFree(d_sums_b);
+        cudaFree(d_avg_r); cudaFree(d_avg_g); cudaFree(d_avg_b);
+        cudaFree(d_covariance_matrices); cudaFree(d_inverse_covariance_matrices);
+        return 1;
+    }
     fclose(fp);
     free(data);
 
