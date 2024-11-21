@@ -293,8 +293,6 @@ int main() {
     scanf("%d", &grid_size_y);
 
     char inputFilepath[1024], outputFilepath[1024];
-    scanf("%1024s", inputFilepath);
-    scanf("%1024s", outputFilepath);
 
     // Reading input and output file paths with buffer size limits
     if (scanf("%4095s", inputFilepath) != 1) {
@@ -318,7 +316,7 @@ int main() {
         return 1;
     }
     if (nc <= 0) {
-        fprintf(stderr, "Number of classes must be positive.\n");
+        fprintf(stderr, "Number of classes must be positive (%d).\n", nc);
         return 1;
     }
 
