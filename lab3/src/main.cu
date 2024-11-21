@@ -155,7 +155,7 @@ int main() {
     CSC(cudaMemcpyToSymbol(const_inv_cov, inv_cov, nc * sizeof(double[3][3])));
 
     float total_time = 0;
-    MEASURE_KERNEL_TIME(classify_kernel<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(d_image, w, h, nc), total_time);
+    MEASURE_KERNEL_TIME((classify_kernel<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(d_image, w, h, nc)), total_time);
 
     CSC(cudaMemcpy(h_image, d_image, total_pixels * sizeof(uchar4), cudaMemcpyDeviceToHost));
     CSC(cudaFree(d_image));
