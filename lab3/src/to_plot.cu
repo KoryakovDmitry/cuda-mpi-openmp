@@ -51,11 +51,6 @@ __device__ double atomicAddDouble(double* address, double val)
     return __longlong_as_double(old);
 }
 
-// Constants for blocks, threads, and grids
-const int THREADS_PER_BLOCK_X = 32;
-const int THREADS_PER_BLOCK_Y = 32;
-const int BLOCKS_PER_GRID_X = 16;
-const int BLOCKS_PER_GRID_Y = 16;
 
 // Constant memory for averages and inverse covariance matrices
 __constant__ double const_avg_r[MAX_CLASSES];
