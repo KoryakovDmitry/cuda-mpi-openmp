@@ -33,8 +33,7 @@
 
 #define MAX_CLASSES 32
 
-#if __CUDA_ARCH__ < 600
-__device__ double atomicAdd(double* address, double val)
+__device__ double atomicAddDouble(double* address, double val)
 {
     unsigned long long int* address_as_ull =
                               (unsigned long long int*)address;
@@ -51,7 +50,6 @@ __device__ double atomicAdd(double* address, double val)
 
     return __longlong_as_double(old);
 }
-#endif
 
 // Constants for blocks, threads, and grids
 const int THREADS_PER_BLOCK_X = 32;
@@ -121,9 +119,9 @@ __global__ void compute_sums(int total_npj, int *d_class_ids, double3 *d_sample_
 
     double3 p = d_sample_pixels[tid];
 
-    atomicAdd(&d_sums_r[class_id], p.x);
-    atomicAdd(&d_sums_g[class_id], p.y);
-    atomicAdd(&d_sums_b[class_id], p.z);
+    atomicAddDouble(&d_sums_r[class_id], p.x);
+    atomicAddDouble(&d_sums_g[class_id], p.y);
+    atomicAddDouble(&d_sums_b[class_id], p.z);
 }
 
 // Kernel to compute averages
