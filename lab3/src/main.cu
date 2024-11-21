@@ -1,4 +1,3 @@
-#include <cuda_runtime.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda_runtime.h>
@@ -31,20 +30,6 @@
         CSC(cudaEventDestroy(_start));                      \
         CSC(cudaEventDestroy(_stop));                       \
     } while (0)
-
-// Function to check CUDA device properties
-void checkCudaDeviceProperties(int w, int h) {
-    cudaDeviceProp prop;
-    int device;
-    CSC(cudaGetDevice(&device));
-    CSC(cudaGetDeviceProperties(&prop, device));
-
-    if (w > prop.maxTexture2D[0] || h > prop.maxTexture2D[1]) {
-        fprintf(stderr, "Error: Texture dimensions exceed device limits: maxTexture2D[0]=%d, maxTexture2D[1]=%d\n",
-                prop.maxTexture2D[0], prop.maxTexture2D[1]);
-        exit(1);
-    }
-}
 
 // Device function to invert a 3x3 matrix
 __device__ void invert_3x3_matrix(const float *a, float *inv_a) {
@@ -321,11 +306,6 @@ int main() {
     cudaArray *arr;
     cudaChannelFormatDesc ch = cudaCreateChannelDesc<uchar4>();
     fprintf(stderr, "Image dimensions: w=%d, h=%d\n", w, h);
-
-    // Check CUDA device properties
-    checkCudaDeviceProperties(w, h);
-
-    // Allocate CUDA array
     CSC(cudaMallocArray(&arr, &ch, w, h)); // [ERROR CUDA] File: 'main.cu'; Line: 309; Message: invalid argument.
     CSC(cudaMemcpy2DToArray(arr, 0, 0, data, w * sizeof(uchar4), w * sizeof(uchar4), h, cudaMemcpyHostToDevice));
 
