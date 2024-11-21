@@ -1,17 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda_runtime.h>
-#include <float.h>
-#include <string.h>
+#include <math.h>
 
-#define CSC(call)                                               \
-    do {                                                        \
-        cudaError_t status = call;                              \
-        if (status != cudaSuccess) {                            \
+#define CSC(call) \
+    do { \
+        cudaError_t status = call; \
+        if (status != cudaSuccess) { \
             fprintf(stderr, "[ERROR CUDA] File: '%s'; Line: %i; Message: %s.\n", \
-                    __FILE__, __LINE__, cudaGetErrorString(status));   \
-            exit(1);                                            \
-        }                                                       \
+                    __FILE__, __LINE__, cudaGetErrorString(status)); \
+            exit(1); \
+        } \
     } while (0)
 
 #define MEASURE_KERNEL_TIME(kernel_call, time_var)              \
@@ -39,151 +38,153 @@
 __constant__ double3 const_avg[MAX_CLASSES];
 __constant__ double const_inv_covariance[MAX_CLASSES][3][3];
 
+// Kernel for classifying pixels
 __global__ void classify_kernel(uchar4 *d_image, int w, int h, int nc) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     int total_pixels = w * h;
 
-    while (tid < total_pixels) {
+    if (tid < total_pixels) {
         uchar4 pixel = d_image[tid];
-        double min_distance = DBL_MAX;
-        int best_class = -1;
+        double3 p = make_double3(pixel.x, pixel.y, pixel.z);
 
-        for (int c = 0; c < nc; ++c) {
-            double diff[3] = {
-                pixel.x - const_avg[c].x,
-                pixel.y - const_avg[c].y,
-                pixel.z - const_avg[c].z
-            };
+        double min_dist = DBL_MAX;
+        int class_id = -1;
 
-            double temp[3] = {0, 0, 0};
-            for (int i = 0; i < 3; ++i) {
-                for (int j = 0; j < 3; ++j) {
-                    temp[i] += diff[j] * const_inv_covariance[c][i][j];
-                }
-            }
+        for (int j = 0; j < nc; j++) {
+            double3 diff = make_double3(p.x - const_avg[j].x, p.y - const_avg[j].y, p.z - const_avg[j].z);
 
-            double distance = 0;
-            for (int i = 0; i < 3; ++i) {
-                distance += temp[i] * diff[i];
-            }
+            // Mahalanobis distance
+            double dist = diff.x * (const_inv_covariance[j][0][0] * diff.x +
+                                    const_inv_covariance[j][0][1] * diff.y +
+                                    const_inv_covariance[j][0][2] * diff.z) +
+                          diff.y * (const_inv_covariance[j][1][0] * diff.x +
+                                    const_inv_covariance[j][1][1] * diff.y +
+                                    const_inv_covariance[j][1][2] * diff.z) +
+                          diff.z * (const_inv_covariance[j][2][0] * diff.x +
+                                    const_inv_covariance[j][2][1] * diff.y +
+                                    const_inv_covariance[j][2][2] * diff.z);
 
-            if (distance < min_distance) {
-                min_distance = distance;
-                best_class = c;
+            if (dist < min_dist) {
+                min_dist = dist;
+                class_id = j;
             }
         }
 
-        d_image[tid].w = best_class; // Store class in alpha channel
-        tid += blockDim.x * gridDim.x;
+        d_image[tid].w = class_id; // Write class ID to alpha channel
     }
 }
 
+// Host function
 int main() {
-    int w, h, block_size_x, block_size_y, grid_size_x, grid_size_y;
-    int nc; // Number of classes
+    int block_size, thread_size;
 
-    // set block_size_x
-    scanf("%d", &block_size_x);
-    // set block_size_y
-    scanf("%d", &block_size_y);
-    // set grid_size_x
-    scanf("%d", &grid_size_x);
-    // set grid_size_y
-    scanf("%d", &grid_size_y);
+    // set block_size
+    scanf("%d", &block_size);
+    // set thread_size
+    scanf("%d", &thread_size);
 
-    char inputFilepath[4095], outputFilepath[4095];
+    // Input and output file paths
+    char input_file[4096], output_file[4096];
 
-    // Reading input and output file paths with buffer size limits
-    if (scanf("%4095s", inputFilepath) != 1) {
+    // Reading input file paths with buffer size limits
+    if (scanf("%4095s", input_file) != 1) {
         fprintf(stderr, "Error reading input filepath.\n");
         return 1;
     }
-    if (scanf("%4095s", outputFilepath) != 1) {
+
+    // Reading output file paths with buffer size limits
+    if (scanf("%4095s", output_file) != 1) {
         fprintf(stderr, "Error reading output filepath.\n");
         return 1;
     }
-        // Open input file
-    FILE *input_file = fopen(inputFilepath, "rb");
-    if (!input_file) {
-        fprintf(stderr, "Error opening input file.\n");
-        return 1;
-    }
 
+    // Read image dimensions
+    int w, h;
+    FILE *fin = fopen(input_file, "rb");
+    fread(&w, sizeof(int), 1, fin);
+    fread(&h, sizeof(int), 1, fin);
 
-    fread(&w, sizeof(int), 1, input_file);
-    fread(&h, sizeof(int), 1, input_file);
+    // Allocate host and device memory for the image
+    int total_pixels = w * h;
+    uchar4 *h_image = (uchar4 *)malloc(total_pixels * sizeof(uchar4));
+    uchar4 *d_image;
+    CSC(cudaMalloc(&d_image, total_pixels * sizeof(uchar4)));
 
-    uchar4 *h_image = (uchar4 *)malloc(w * h * sizeof(uchar4));
-    fread(h_image, sizeof(uchar4), w * h, input_file);
-    fclose(input_file);
+    // Read image data
+    fread(h_image, sizeof(uchar4), total_pixels, fin);
+    fclose(fin);
+    CSC(cudaMemcpy(d_image, h_image, total_pixels * sizeof(uchar4), cudaMemcpyHostToDevice));
 
-    double3 h_avg[MAX_CLASSES];
-    double h_covariance[MAX_CLASSES][3][3];
-    double h_inv_covariance[MAX_CLASSES][3][3];
+    // Number of classes
+    int nc;
+    scanf("%d", &nc);
 
-    // Reading the number of classes
-    if (scanf("%d", &nc) != 1) {
-        fprintf(stderr, "Error reading number of classes.\n");
-        return 1;
-    }
+    // Host memory for averages and covariances
+    double3 avg[MAX_CLASSES];
+    double covariance[MAX_CLASSES][3][3];
 
-    // Reading class information
-    for (int c = 0; c < nc; ++c) {
-        int npixels;
-        if (scanf("%d", &npixels) != 1 || npixels <= 0) {
-            fprintf(stderr, "Invalid number of pixels for class %d.\n", c);
-            free(h_image);
-            return 1;
-        }
+    // Read class data and compute averages and covariances
+    for (int j = 0; j < nc; j++) {
+        int npj;
+        scanf("%d", &npj);
 
-        double sum_x = 0, sum_y = 0, sum_z = 0;
-        for (int p = 0; p < npixels; ++p) {
+        double3 sum = make_double3(0, 0, 0);
+        double3 *pixels = (double3 *)malloc(npj * sizeof(double3));
+
+        for (int i = 0; i < npj; i++) {
             int x, y;
             scanf("%d %d", &x, &y);
             uchar4 pixel = h_image[y * w + x];
-            sum_x += pixel.x;
-            sum_y += pixel.y;
-            sum_z += pixel.z;
+            double3 p = make_double3(pixel.x, pixel.y, pixel.z);
+            sum.x += p.x;
+            sum.y += p.y;
+            sum.z += p.z;
+            pixels[i] = p;
         }
 
-        h_avg[c].x = sum_x / npixels;
-        h_avg[c].y = sum_y / npixels;
-        h_avg[c].z = sum_z / npixels;
+        avg[j] = make_double3(sum.x / npj, sum.y / npj, sum.z / npj);
 
-        // Reset covariance matrix
-        memset(h_covariance[c], 0, 9 * sizeof(double));
+        double cov[3][3] = {0};
+        for (int i = 0; i < npj; i++) {
+            double3 diff = make_double3(pixels[i].x - avg[j].x, pixels[i].y - avg[j].y, pixels[i].z - avg[j].z);
+            cov[0][0] += diff.x * diff.x;
+            cov[0][1] += diff.x * diff.y;
+            cov[0][2] += diff.x * diff.z;
+            cov[1][0] += diff.y * diff.x;
+            cov[1][1] += diff.y * diff.y;
+            cov[1][2] += diff.y * diff.z;
+            cov[2][0] += diff.z * diff.x;
+            cov[2][1] += diff.z * diff.y;
+            cov[2][2] += diff.z * diff.z;
+        }
+
+        for (int i = 0; i < 3; i++)
+            for (int k = 0; k < 3; k++)
+                covariance[j][i][k] = cov[i][k] / (npj - 1);
+
+        free(pixels);
     }
 
-    // Covariance and inversion (left as placeholder, implement accordingly)
-    // Copy data to device constant memory
-    CSC(cudaMemcpyToSymbol(const_avg, h_avg, sizeof(double3) * nc));
-    CSC(cudaMemcpyToSymbol(const_inv_covariance, h_inv_covariance, sizeof(double) * 9 * nc));
+    // Copy averages and inverse covariances to device
+    CSC(cudaMemcpyToSymbol(const_avg, avg, nc * sizeof(double3)));
+    CSC(cudaMemcpyToSymbol(const_inv_covariance, covariance, nc * sizeof(double[3][3])));
 
-    uchar4 *d_image;
-    CSC(cudaMalloc(&d_image, w * h * sizeof(uchar4)));
-    CSC(cudaMemcpy(d_image, h_image, w * h * sizeof(uchar4), cudaMemcpyHostToDevice));
-
+    // Launch classification kernel
     float total_kernel_time = 0.0f;
-    MEASURE_KERNEL_TIME(
-        (classify_kernel<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(d_image, w, h, nc)),
-        total_kernel_time);
+    MEASURE_KERNEL_TIME(classify_kernel<<<block_size, thread_size>>>(d_image, w, h, nc));
+    CSC(cudaDeviceSynchronize());
 
-    CSC(cudaMemcpy(h_image, d_image, w * h * sizeof(uchar4), cudaMemcpyDeviceToHost));
-    CSC(cudaFree(d_image));
+    // Copy results back to host and write output
+    CSC(cudaMemcpy(h_image, d_image, total_pixels * sizeof(uchar4), cudaMemcpyDeviceToHost));
+    FILE *fout = fopen(output_file, "wb");
+    fwrite(&w, sizeof(int), 1, fout);
+    fwrite(&h, sizeof(int), 1, fout);
+    fwrite(h_image, sizeof(uchar4), total_pixels, fout);
+    fclose(fout);
 
-    FILE *output_file = fopen(outputFilepath, "wb");
-    if (!output_file) {
-        fprintf(stderr, "Error opening output file.\n");
-        free(h_image);
-        return 1;
-    }
-
-    fwrite(&w, sizeof(int), 1, output_file);
-    fwrite(&h, sizeof(int), 1, output_file);
-    fwrite(h_image, sizeof(uchar4), w * h, output_file);
-    fclose(output_file);
-
+    // Free memory
     free(h_image);
+    CSC(cudaFree(d_image));
     printf("CUDA execution time: <%f ms>\n", total_kernel_time);
     return 0;
 }
