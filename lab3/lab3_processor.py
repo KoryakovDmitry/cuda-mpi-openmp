@@ -101,8 +101,7 @@ class Lab3Processor(BaseLabProcessor):
         self.data_output_gt = dict()
         for ii, path2data in enumerate(self.data2test_pre):
             data_input_item = ImgData(path2data=path2data, idx=ii)
-            (w, h) = data_input_item.png.size[0:2]
-
+            # (w, h) = data_input_item.png.size[0:2]
             # if os.path.basename(path2data) in MAP_TO_INIT_POINTS:
             #     definition_classes = MAP_TO_INIT_POINTS[os.path.basename(path2data)]
             # else:
