@@ -378,7 +378,7 @@ int main() {
     double total_kernel_time = 0.0f; // Variable to accumulate kernel execution times
 
     // Read sample pixels
-    MEASURE_KERNEL_TIME((read_sample_pixels<<<THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_y>>>(d_image, w, h, total_npj, d_coordinates_flat, d_sample_pixels)), total_kernel_time);
+    MEASURE_KERNEL_TIME((read_sample_pixels<<<THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y>>>(d_image, w, h, total_npj, d_coordinates_flat, d_sample_pixels)), total_kernel_time);
 
     // Compute sums
     double *d_sums_r, *d_sums_g, *d_sums_b;
