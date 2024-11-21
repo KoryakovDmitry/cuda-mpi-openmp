@@ -31,9 +31,6 @@
         CSC(cudaEventDestroy(_stop));                           \
     } while (0)
 
-#define THREADS_PER_BLOCK 256
-#define BLOCKS_PER_GRID 256
-
 #define MAX_CLASSES 32
 
 // Device constants
